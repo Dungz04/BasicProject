@@ -1,0 +1,110 @@
+
+
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #111;
+    color: #fff;
+}
+
+.login-background {
+    display: flex;
+    width: 100%;
+    max-width: 800px;
+    background-color: #1a1a1a;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.6);
+}
+
+.login-background:before {
+    content: "";
+    flex: 1;
+    background: url('https://media2.dev.to/dynamic/image/width=1080,height=1080,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.amazonaws.com%2Fi%2Fmih10uhu1464fx1kr0by.jpg') center/cover no-repeat;
+    opacity: 0.2;
+}
+
+.login-box {
+    flex: 1;
+    padding: 3rem;
+    background-color: #1a1a1a;
+    text-align: left;
+}
+
+h2 {
+    margin: 0 0 1rem;
+    color: #ff3333;
+}
+
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 0.75rem;
+    margin: 0.3rem 0;
+    background-color: #333;
+    border: 1px solid #444;
+    border-radius: 5px;
+    color: #fff;
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+.form-group input:focus {
+    border-color: #ff3333;
+}
+
+.error-message {
+    color: #ff4d4f;
+    margin: 0.5rem 0;
+    font-size: 0.9rem;
+}
+
+.login-button {
+    width: 100%;
+    padding: 0.75rem;
+    background: linear-gradient(135deg, #aa0000, #550000);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: transform 0.2s, background 0.3s;
+}
+
+.login-button:hover {
+    transform: scale(1.05);
+    background: linear-gradient(135deg, #ff3333, #aa0000);
+}
+
+.register-text {
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    color: #aaa;
+    margin-top: 0.5rem;
+}
+
+.register-text a {
+    color: #ff3333;
+    text-decoration: none;
+}
+
+.register-text a:hover {
+    text-decoration: underline;
+}
+
+.forgot-password {
+    text-align: center;
+    color: #550000;
+    margin-top: 0.5rem;
+    cursor: pointer;
+}
+
+.forgot-password:hover {
+    transform: scale(1.05);
+}

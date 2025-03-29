@@ -1,0 +1,143 @@
+/* 🌟 Phần banner chính */
+
+.banner {
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+    padding: 0 100px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-size: cover;
+    background-position: center;
+    overflow: hidden;
+    transition: background-image 0.5s ease-in-out;
+}
+
+/* 🔥 Hiệu ứng overlay làm mờ nền */
+.banner::before {
+    position: absolute;
+    content: '';
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1;
+}
+
+/* 📌 Nội dung chính của banner */
+.banner-content {
+    position: relative;
+    max-width: 600px;
+    text-align: center;
+    color: white;
+    z-index: 2;
+}
+
+/* 🎬 Logo phim nếu có */
+.movie-logo {
+    max-width: 500px;
+    height: auto;
+    margin-bottom: 15px;
+}
+
+/* 🏆 Thông tin chính (Năm, điểm số, độ tuổi, thời lượng) */
+.banner-content h4 {
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-end;
+    gap: 10px;
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 400;
+    font-size: 30px;
+}
+
+
+.banner-content h4 span {
+    padding: 5px 20px;
+    border-right: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.banner-content h4 span:last-child {
+    border-right: none;
+}
+
+.banner-content h4 span:nth-child(2) {
+    color: #e50914;
+}
+
+.banner-content h4 span:nth-child(4) {
+    background-color: #e50914;
+    color: white;
+    padding: 2px 5px;
+    border-radius: 3px;
+    margin-left: 5px;
+}
+
+/* 🎭 Thể loại phim */
+.genres {
+    font-size: 18px;
+    font-style: italic;
+    font-weight: 400;
+    opacity: 0.9;
+    margin-bottom: 15px;
+    text-align: left;
+
+
+}
+
+/* 📜 Mô tả phim */
+.banner-content .overview {
+    font-size: 16px;
+    font-weight: 300;
+    line-height: 1.6em;
+    margin: 15px 0;
+    text-align: justify;
+}
+
+/* 🔘 Nhóm nút bấm */
+.button-group {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    margin-top: 15px;
+}
+
+/* 🔴 Nút bấm chính */
+.btn {
+    padding: 12px 25px;
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border: none;
+    cursor: pointer;
+    transition: 0.3s;
+    border-radius: 5px;
+}
+
+.btn.play {
+    background: #e50914;
+    color: white;
+}
+
+.btn.play:hover {
+    background: white;
+    color: #e50914;
+}
+
+.btn.list {
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.btn.list:hover {
+    background: #e50914;
+    border-color: white;
+}
+
+

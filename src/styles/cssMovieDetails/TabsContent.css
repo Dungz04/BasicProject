@@ -1,0 +1,98 @@
+/* TabsContent.css */
+/* content-gap */
+.content-gap {
+    padding: 0 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+/* ====== Tabs điều hướng ====== */
+.cg-tabs {
+    border-bottom: 2px solid #444;
+    margin-bottom: 1rem;
+}
+
+.v-tabs {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-start;
+    flex-wrap: wrap; /* Cho phép wrap trên mobile */
+    cursor: pointer;
+}
+
+.v-tabs .nav-link {
+    color: white;
+    background: transparent;
+    padding: 0.75rem 1.25rem;
+    font-size: 1rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.v-tabs .nav-link:hover,
+.v-tabs .nav-link.active {
+    border-bottom: 3px solid #e50914;
+}
+
+/* ====== Nội dung các tab ====== */
+.tab-content {
+    margin-top: 1rem;
+}
+
+.tab-pane {
+    display: none; /* Mặc định ẩn */
+}
+
+.tab-pane.active,
+.tab-pane.active.show {
+    display: block; /* Hiển thị tab đang chọn */
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ====== Box chứa nội dung từng tab ====== */
+.cg-body-box {
+    background: #222;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.2);
+    color: white;
+}
+
+.box-header {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 0.75rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .content-gap {
+        padding: 0 1rem;
+        gap: 1rem;
+    }
+
+    .v-tabs {
+        gap: 0.5rem;
+    }
+
+    .v-tabs .nav-link {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+
+    .cg-body-box {
+        padding: 0.75rem;
+    }
+
+    .box-header {
+        font-size: 1rem;
+    }
+}

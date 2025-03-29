@@ -1,0 +1,396 @@
+.top-10-section {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2vmin 3vmin;
+    font-family: 'Lexend', sans-serif;
+    color: #fff;
+    background-color: #1a1a1a;
+}
+
+.top-10-section h2 {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    margin-bottom: 1.5rem;
+    border-left: 4px solid #e50914;
+    padding-left: 1rem;
+    line-height: 1.2;
+    text-align: left;
+}
+
+.movie-card {
+    position: relative;
+    overflow: hidden;
+    border-radius: 10px;
+    background-color: #1a1a1a;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    height: 550px;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+/* Hiệu ứng hover chỉ áp dụng trên thiết bị có con trỏ (desktop) */
+@media (hover: hover) and (pointer: fine) {
+    .movie-card:hover {
+        transform: scale(1.05);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+    }
+}
+
+/* Trên thiết bị cảm ứng, thêm hiệu ứng khi chạm */
+.movie-card:active {
+    transform: scale(0.98);
+}
+
+.movie-card .rank {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background-color: #ff0000;
+    color: #fff;
+    font-size: clamp(1rem, 2.5vw, 1.5rem);
+    font-weight: bold;
+    border-radius: 50%;
+    width: clamp(40px, 5vw, 50px);
+    height: clamp(40px, 5vw, 50px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1;
+}
+
+.movie-card .movie-image {
+    width: 100%;
+    height: 400px;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    cursor: pointer;
+}
+
+/* Ẩn thẻ img nếu không cần thiết (vì đã dùng background-image) */
+.movie-card img {
+    display: none;
+}
+
+.movie-info {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    flex-grow: 1;
+}
+
+.movie-info .title {
+    font-size: clamp(1rem, 2vw, 1.125rem);
+    font-weight: bold;
+    margin: 0.5rem 0;
+    color: #fff;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+}
+
+.movie-info .sub-title {
+    font-size: clamp(0.75rem, 1.5vw, 0.875rem);
+    color: #999;
+    margin-bottom: 0.5rem;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.movie-info .details {
+    font-size: clamp(0.75rem, 1.5vw, 0.875rem);
+    color: #ccc;
+    margin-bottom: 0.5rem;
+}
+
+.text-green-500 {
+    color: #22c55e;
+}
+
+.text-yellow-500 {
+    color: #eab308;
+}
+
+/* Swiper styles */
+.swiper-button-prev,
+.swiper-button-next {
+    color: #e50914 !important;
+    width: 40px;
+    height: 40px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.swiper-button-prev::after,
+.swiper-button-next::after {
+    font-size: 1rem !important;
+}
+
+.swiper-pagination {
+    position: relative;
+    margin-top: 1rem;
+}
+
+.swiper-pagination-bullet {
+    background: #fff !important;
+    width: 10px;
+    height: 10px;
+}
+
+.swiper-pagination-bullet-active {
+    background: #e50914 !important;
+}
+
+/* Style cho Link */
+.movie-card-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+/* Skeleton UI */
+.skeleton {
+    background-color: #2a2a2a;
+    animation: skeleton-loading 1s linear infinite alternate;
+}
+
+.skeleton-rank {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: clamp(40px, 5vw, 50px);
+    height: clamp(40px, 5vw, 50px);
+    border-radius: 50%;
+}
+
+.skeleton-image {
+    width: 100%;
+    height: 400px;
+    border-radius: 10px 10px 0 0;
+}
+
+.skeleton-title {
+    width: 80%;
+    height: 1.2rem;
+    margin: 0.5rem 0;
+}
+
+.skeleton-text {
+    width: 60%;
+    height: 0.9rem;
+    margin: 0.5rem 0;
+}
+
+@keyframes skeleton-loading {
+    0% {
+        background-color: #2a2a2a;
+    }
+    100% {
+        background-color: #3a3a3a;
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 1280px) {
+    .top-10-section {
+        padding: 2vmin;
+    }
+
+    .movie-card {
+        height: 500px;
+    }
+
+    .movie-card .movie-image,
+    .skeleton-image {
+        height: 350px;
+    }
+}
+
+@media (max-width: 1024px) {
+    .movie-card {
+        height: 450px;
+    }
+
+    .movie-card .movie-image,
+    .skeleton-image {
+        height: 300px;
+    }
+
+    .movie-info .title {
+        font-size: clamp(0.9rem, 1.8vw, 1rem);
+    }
+
+    .movie-info .sub-title,
+    .movie-info .details {
+        font-size: clamp(0.7rem, 1.3vw, 0.8rem);
+    }
+
+    .movie-card .rank,
+    .skeleton-rank {
+        width: 45px;
+        height: 45px;
+        font-size: 1.2rem;
+    }
+
+    .swiper-button-prev,
+    .swiper-button-next {
+        width: 35px;
+        height: 35px;
+    }
+}
+
+@media (max-width: 768px) {
+    .top-10-section h2 {
+        font-size: 1.5rem;
+    }
+
+    .movie-card {
+        height: 400px;
+    }
+
+    .movie-card .movie-image,
+    .skeleton-image {
+        height: 250px;
+    }
+
+    .movie-info .title {
+        font-size: 0.9rem;
+    }
+
+    .movie-info .sub-title,
+    .movie-info .details {
+        font-size: 0.75rem;
+    }
+
+    .movie-card .rank,
+    .skeleton-rank {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+    }
+
+    .swiper-button-prev,
+    .swiper-button-next {
+        width: 30px;
+        height: 30px;
+    }
+
+    .swiper-button-prev::after,
+    .swiper-button-next::after {
+        font-size: 0.8rem !important;
+    }
+
+    .swiper-pagination-bullet {
+        width: 8px;
+        height: 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .top-10-section {
+        padding: 1vmin;
+    }
+
+    .top-10-section h2 {
+        font-size: 1.25rem;
+        margin-bottom: 1rem;
+    }
+
+    .movie-card {
+        height: 350px;
+    }
+
+    .movie-card .movie-image,
+    .skeleton-image {
+        height: 200px;
+    }
+
+    .movie-info {
+        padding: 0.75rem;
+    }
+
+    .movie-info .title {
+        font-size: 0.85rem;
+    }
+
+    .movie-info .sub-title,
+    .movie-info .details {
+        font-size: 0.7rem;
+    }
+
+    .movie-card .rank,
+    .skeleton-rank {
+        width: 35px;
+        height: 35px;
+        font-size: 0.9rem;
+    }
+
+    .swiper-button-prev,
+    .swiper-button-next {
+        display: none;
+    }
+}
+
+@media (max-width: 320px) {
+    .movie-card {
+        height: 300px;
+    }
+
+    .movie-card .movie-image,
+    .skeleton-image {
+        height: 180px;
+    }
+
+    .movie-info .title {
+        font-size: 0.8rem;
+    }
+
+    .movie-info .sub-title,
+    .movie-info .details {
+        font-size: 0.65rem;
+    }
+
+    .movie-card .rank,
+    .skeleton-rank {
+        width: 30px;
+        height: 30px;
+        font-size: 0.8rem;
+    }
+}
+
+@media (min-width: 1600px) {
+    .top-10-section {
+        max-width: 1600px;
+    }
+
+    .movie-card {
+        height: 600px;
+    }
+
+    .movie-card .movie-image,
+    .skeleton-image {
+        height: 450px;
+    }
+
+    .movie-info .title {
+        font-size: 1.25rem;
+    }
+
+    .movie-info .sub-title,
+    .movie-info .details {
+        font-size: 1rem;
+    }
+}
