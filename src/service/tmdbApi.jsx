@@ -10,7 +10,7 @@ const tmdbApi = {
                 params: {
                     api_key: tmdbApi.apiKey,
                     query: query,
-                    language: 'en-US',
+                    language: "vi-VN",
                     page: 1,
                 },
             });

@@ -38,7 +38,7 @@ const MovieInfo = ({ movie }) => {
                         <span>{movie.release_date?.split("-")[0]}</span>
                     </div>
                     <div className="tag-classic">
-                        <span>{Math.floor(movie.runtime / 60)}h {movie.runtime % 60}m</span>
+                        <span>{movie.runtime} phút</span>
                     </div>
                 </div>
                 <div className="hl-tags mb-4">

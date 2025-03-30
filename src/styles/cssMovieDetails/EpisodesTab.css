@@ -14,16 +14,25 @@
     position: relative;
     border-radius: .75rem;
     overflow: hidden;
-    background-color: var(--bg-4)
+    background-color: var(--bg-4);
 }
 
+.cg-body-box .btn.btn-sm.btn-light {
+    background-color: #e50914; /* Màu nền */
+    color: white;             /* Màu chữ */
+    border-radius: 5px;       /* Bo tròn góc */
+}
+
+.cg-body-box .btn.btn-sm.btn-light:hover {
+    background-color: transparent;
+}
 
 .de-type .item:hover {
     top: -5px;
 }
 
 .de-type .item.active {
-    border: 2px solid var(--primary, #e50914);
+    border: 2px solid #e50914;
 }
 
 .de-type .item .m-thumbnail {

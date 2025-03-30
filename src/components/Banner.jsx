@@ -7,12 +7,13 @@ import tmdbApi from "../service/tmdbApi.jsx";
 const Banner = () => {
     const [movies, setMovies] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
+    const [isLoading, setIsLoading] = useState(true); // State để kiểm soát Skeleton UI
 
     useEffect(() => {
         const fetchData = async () => {
-            // Sử dụng API mới getWeeklyTrending
+            setIsLoading(true); // Bật Skeleton UI khi bắt đầu tải
             const trendingData = await tmdbApi.getWeeklyTrending();
-            const trendingWeekMovies = trendingData.movies; // Chỉ lấy movies
+            const trendingWeekMovies = trendingData.movies;
 
             const getCertification = (releaseDates) => {
                 const priorityCountries = ["US", "GB", "VN"];
@@ -30,12 +31,9 @@ const Banner = () => {
                     const details = await tmdbApi.getMovieDetails(movie.id);
                     const releaseDates = await tmdbApi.getMovieReleaseDates(movie.id);
                     const certification = getCertification(releaseDates);
-
-                    // Lấy overview, fallback sang tiếng Anh nếu không có
                     const overview = details.overview ||
                         (await tmdbApi.getMovieDetails(movie.id, { language: "en-US" })).overview ||
                         "Không có mô tả";
-
                     return { ...movie, ...details, overview, certification };
                 })
             );
@@ -44,6 +42,7 @@ const Banner = () => {
                 setMovies(moviesWithDetails);
                 setCurrentIndex(0);
             }
+            setIsLoading(false); // Tắt Skeleton UI khi tải xong
         };
 
         fetchData();
@@ -58,6 +57,24 @@ const Banner = () => {
 
         return () => clearInterval(interval);
     }, [movies]);
+
+    // Skeleton UI khi đang tải
+    if (isLoading) {
+        return (
+            <div className="banner skeleton-banner">
+                <div className="banner-content">
+                    <div className="skeleton skeleton-title"></div>
+                    <div className="skeleton skeleton-info"></div>
+                    <div className="skeleton skeleton-genres"></div>
+                    <div className="skeleton skeleton-overview"></div>
+                    <div className="button-group">
+                        <div className="skeleton skeleton-button"></div>
+                        <div className="skeleton skeleton-button"></div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     if (movies.length === 0) return <div>Loading...</div>;
 
