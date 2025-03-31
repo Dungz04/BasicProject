@@ -6,34 +6,44 @@ import "swiper/css/navigation";
 import "swiper/css/pagination";
 import "../styles/Top10Movies.css";
 import { Link } from "react-router-dom";
-import tmdbApi from "../service/tmdbApi";
+import tmdbApi from "../service/tmdbApi"; // Đường dẫn giữ nguyên nếu đúng
 
 const Top10Movies = () => {
-    const [movies, setMovies] = useState([]);
-    const [loading, setLoading] = useState(true); // Thêm trạng thái loading
+    const [content, setContent] = useState([]); // Đổi tên để phản ánh cả movie và TV
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                setLoading(true); // Bắt đầu loading
-                const trendingMovies = await tmdbApi.getTrendingDayMovies("day");
-                console.log("Trending Movies from API:", trendingMovies.slice(0, 10));
+                setLoading(true);
 
-                const moviesWithDetails = await Promise.all(
-                    trendingMovies.slice(0, 10).map(async (movie) => {
-                        const details = await tmdbApi.getMovieDetails(movie.id);
-                        const releaseDates = await tmdbApi.getMovieReleaseDates(movie.id);
-                        const certification = releaseDates.find((r) => r.iso_3166_1 === "US")?.release_dates[0]?.certification || "N/A";
-                        return { ...movie, ...details, certification };
+                // Lấy trending movies và TV shows trong ngày
+                const trendingMovies = await tmdbApi.getTrendingByDay("movie", "day");
+
+
+                // Kết hợp và lấy top 10 từ cả hai danh sách
+                const combinedTrending = [...trendingMovies]
+                    .sort((a, b) => b.popularity - a.popularity) // Sắp xếp theo độ phổ biến
+                    .slice(0, 10); // Lấy top 10
+
+                const contentWithDetails = await Promise.all(
+                    combinedTrending.map(async (item) => {
+                        const type = item.title ? "movie" : "tv"; // Xác định loại nội dung
+                        const details = await tmdbApi.getContentDetails(item.id, type);
+                        const releaseInfo = await tmdbApi.getContentReleaseInfo(item.id, type);
+                        const certification = releaseInfo.find((r) => r.iso_3166_1 === "US")?.[
+                            type === "movie" ? "release_dates" : "rating"
+                        ]?.[type === "movie" ? 0 : ""]?.[type === "movie" ? "certification" : ""] || "N/A";
+                        return { ...item, ...details, certification, type };
                     })
                 );
 
-                console.log("Movies with Details:", moviesWithDetails);
-                setMovies(moviesWithDetails);
+                console.log("Top 10 Content with Details:", contentWithDetails);
+                setContent(contentWithDetails);
             } catch (error) {
                 console.error("Lỗi khi lấy dữ liệu:", error);
             } finally {
-                setLoading(false); // Kết thúc loading
+                setLoading(false);
             }
         };
         fetchData();
@@ -91,31 +101,35 @@ const Top10Movies = () => {
                     1280: { slidesPerView: 4 },
                 }}
             >
-                {movies.map((movie, index) => (
-                    <SwiperSlide key={movie.id}>
-                        <Link to={`/phim/${movie.id}`} className="movie-card-link">
-                            <div className="movie-card">
-                                <div className="rank">{index + 1}</div>
-                                <div
-                                    className="movie-image"
-                                    style={{
-                                        backgroundImage: `url(https://image.tmdb.org/t/p/w500${movie.poster_path})`,
-                                    }}
-                                />
-                                <div className="movie-info">
-                                    <p className="title">{movie.title}</p>
-                                    <p className="details">
-                                        ⭐ <span className={movie.vote_average >= 7 ? "text-green-500" : "text-yellow-500"}>
-                                            {movie.vote_average.toFixed(1)}
-                                        </span> ({movie.vote_count} lượt)
-                                    </p>
-                                    <p className="details">📅 Năm: {movie.release_date?.split("-")[0]}</p>
-                                    <p className="details">🔞 Độ tuổi: {movie.certification}</p>
+                {content.map((item, index) => {
+                    const title = item.title || item.name;
+                    const year = (item.release_date || item.first_air_date)?.split("-")[0] || "N/A";
+                    return (
+                        <SwiperSlide key={item.id}>
+                            <Link to={`/phim/${item.id}?type=${item.type}`} className="movie-card-link">
+                                <div className="movie-card">
+                                    <div className="rank">{index + 1}</div>
+                                    <div
+                                        className="movie-image"
+                                        style={{
+                                            backgroundImage: `url(https://image.tmdb.org/t/p/w500${item.poster_path})`,
+                                        }}
+                                    />
+                                    <div className="movie-info">
+                                        <p className="title">{title}</p>
+                                        <p className="details">
+                                            ⭐ <span className={item.vote_average >= 7 ? "text-green-500" : "text-yellow-500"}>
+                                                {item.vote_average.toFixed(1)}
+                                            </span> ({item.vote_count} lượt)
+                                        </p>
+                                        <p className="details">📅 Năm: {year}</p>
+                                        <p className="details">🔞 Độ tuổi: {item.certification}</p>
+                                    </div>
                                 </div>
-                            </div>
-                        </Link>
-                    </SwiperSlide>
-                ))}
+                            </Link>
+                        </SwiperSlide>
+                    );
+                })}
             </Swiper>
         </div>
     );

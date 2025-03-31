@@ -18,12 +18,12 @@ const MovieDetail = () => {
         const fetchMovieData = async () => {
             if (!movieId) return; // Kiểm tra nếu movieId không tồn tại
 
-            const movieDetails = await tmdbApi.getMovieDetails(movieId);
-            const releaseDates = await tmdbApi.getMovieReleaseDates(movieId);
+            const movieDetails = await tmdbApi.getContentDetails(movieId);
+            const releaseDates = await tmdbApi.getContentReleaseInfo(movieId);
             const certification = releaseDates.find((r) => r.iso_3166_1 === "US")?.release_dates[0]?.certification || "N/A";
-            const credits = await tmdbApi.getMovieCredits(movieId);
+            const credits = await tmdbApi.getContentCredits(movieId);
             const actorsList = credits?.cast.slice(0, 5) || [];
-            const recommended = await tmdbApi.getMovieRecommendations(movieId);
+            const recommended = await tmdbApi.getContentRecommendations(movieId);
             const recommendedList = recommended?.results.slice(0, 5) || [];
 
             console.log("Movie Details:", movieDetails);

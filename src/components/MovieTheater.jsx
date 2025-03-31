@@ -16,11 +16,11 @@ const MovieTheater = () => {
         const fetchMovies = async () => {
             try {
                 setLoading(true);
-                const nowPlaying = await tmdbApi.getNowPlayingMovies();
+                const nowPlaying = await tmdbApi.getNowPlayingContent();
                 const movieDetails = await Promise.all(
                     nowPlaying.map(async (movie) => {
-                        const details = await tmdbApi.getMovieDetails(movie.id);
-                        const releaseDates = await tmdbApi.getMovieReleaseDates(movie.id);
+                        const details = await tmdbApi.getContentDetails(movie.id);
+                        const releaseDates = await tmdbApi.getContentReleaseInfo(movie.id);
                         const certificationData = releaseDates.find(item => item.iso_3166_1 === "US");
                         const certification = certificationData?.release_dates?.[0]?.certification || "N/A";
 

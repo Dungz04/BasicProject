@@ -54,7 +54,7 @@ const MovieInfo = ({ movie }) => {
                 </div>
                 <div className="detail-line d-flex">
                     <div className="de-title">Thời lượng:</div>
-                    <div className="de-value">{Math.floor(movie.runtime / 60)}h {movie.runtime % 60}m</div>
+                    <div className="de-value">{movie.runtime} phút</div>
                 </div>
                 <div className="detail-line d-flex">
                     <div className="de-title">Quốc gia:</div>

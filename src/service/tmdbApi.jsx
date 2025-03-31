@@ -4,9 +4,10 @@ const tmdbApi = {
     apiKey: import.meta.env.VITE_TMDB_API_KEY,
     baseUrl: "https://api.themoviedb.org/3",
 
-    searchMovies: async (query) => {
+    // API: Tìm kiếm cả movie và TV shows
+    searchContent: async (query, type = "multi") => {
         try {
-            const response = await axios.get(`${BASE_URL}/search/movie`, {
+            const response = await axios.get(`${tmdbApi.baseUrl}/search/${type}`, {
                 params: {
                     api_key: tmdbApi.apiKey,
                     query: query,
@@ -16,11 +17,12 @@ const tmdbApi = {
             });
             return response.data;
         } catch (error) {
-            throw new Error('Failed to search movies');
+            console.error("❌ Failed to search content:", error.response?.data || error.message);
+            throw new Error("Failed to search content");
         }
     },
 
-    // 📈 API: Lấy danh sách phim thịnh hành tuần này (Trending This Week)
+    // API: Lấy danh sách trending tuần này (movie và TV shows)
     getWeeklyTrending: async () => {
         if (!tmdbApi.apiKey) {
             console.error("⚠️ API Key is missing. Please set VITE_TMDB_API_KEY in .env");
@@ -28,7 +30,6 @@ const tmdbApi = {
         }
 
         try {
-            // Lấy trending movies
             const moviesResponse = await axios.get(`${tmdbApi.baseUrl}/trending/movie/week`, {
                 params: {
                     api_key: tmdbApi.apiKey,
@@ -36,7 +37,6 @@ const tmdbApi = {
                 },
             });
 
-            // Lấy trending TV shows
             const tvResponse = await axios.get(`${tmdbApi.baseUrl}/trending/tv/week`, {
                 params: {
                     api_key: tmdbApi.apiKey,
@@ -46,7 +46,7 @@ const tmdbApi = {
 
             return {
                 movies: moviesResponse.data.results,
-                tvShows: tvResponse.data.results
+                tvShows: tvResponse.data.results,
             };
         } catch (error) {
             console.error("❌ Error fetching weekly trending content:", error.response?.data || error.message);
@@ -55,14 +55,15 @@ const tmdbApi = {
     },
 
 
-    getTrendingDayMovies: async (timeWindow = "day") => {
+    // API: Lấy danh sách trending theo ngày (movie hoặc TV)
+    getTrendingByDay: async (type = "movie", timeWindow = "day") => {
         if (!tmdbApi.apiKey) {
             console.error("⚠️ API Key is missing. Please set VITE_TMDB_API_KEY in .env");
             return [];
         }
 
         try {
-            const response = await axios.get(`${tmdbApi.baseUrl}/trending/movie/${timeWindow}`, {
+            const response = await axios.get(`${tmdbApi.baseUrl}/trending/${type}/${timeWindow}`, {
                 params: {
                     api_key: tmdbApi.apiKey,
                     language: "vi-VN",
@@ -70,19 +71,19 @@ const tmdbApi = {
             });
             return response.data.results;
         } catch (error) {
-            console.error("❌ Error fetching trending movies:", error.response?.data || error.message);
+            console.error(`❌ Error fetching trending ${type}:`, error.response?.data || error.message);
             return [];
         }
     },
 
-    // 🔥 API: Lấy chi tiết phim
-    getMovieDetails: async (movieId, params = { language: "vi-VN" }) => {
+    // API: Lấy chi tiết nội dung (movie hoặc TV)
+    getContentDetails: async (id, type = "movie", params = { language: "vi-VN" }) => {
         if (!tmdbApi.apiKey) {
             console.error("⚠️ API Key is missing. Please set VITE_TMDB_API_KEY in .env");
             return null;
         }
         try {
-            const response = await axios.get(`${tmdbApi.baseUrl}/movie/${movieId}`, {
+            const response = await axios.get(`${tmdbApi.baseUrl}/${type}/${id}`, {
                 params: {
                     api_key: tmdbApi.apiKey,
                     ...params,
@@ -90,80 +91,81 @@ const tmdbApi = {
             });
             return response.data;
         } catch (error) {
-            console.error(`❌ Error fetching details for movie ${movieId}:`, error.response?.data || error.message);
+            console.error(`❌ Error fetching details for ${type} ${id}:`, error.response?.data || error.message);
             return null;
         }
     },
 
-    // 🔥 API mới: Lấy thông tin độ tuổi (certification)
-    getMovieReleaseDates: async (movieId) => {
+    // API: Lấy thông tin độ tuổi (release dates cho movie, content rating cho TV)
+    getContentReleaseInfo: async (id, type = "movie") => {
         if (!tmdbApi.apiKey) {
             console.error("⚠️ API Key is missing. Please set VITE_TMDB_API_KEY in .env");
             return [];
         }
 
         try {
-            const response = await axios.get(`${tmdbApi.baseUrl}/movie/${movieId}/release_dates`, {
+            const endpoint = type === "movie" ? `movie/${id}/release_dates` : `tv/${id}/content_ratings`;
+            const response = await axios.get(`${tmdbApi.baseUrl}/${endpoint}`, {
                 params: {
                     api_key: tmdbApi.apiKey,
-                },
-            });
-            return response.data.results; // Trả về mảng release dates
-        } catch (error) {
-            console.error(`❌ Error fetching release dates for movie ${movieId}:`, error.response?.data || error.message);
-            return [];
-        }
-    },
-
-    // 📌 API: Lấy danh sách phim đang chiếu rạp
-    getNowPlayingMovies: async () => {
-        if (!tmdbApi.apiKey) {
-            console.error("⚠️ API Key is missing. Please set VITE_TMDB_API_KEY in .env");
-            return [];
-        }
-
-        try {
-            const response = await axios.get(`${tmdbApi.baseUrl}/movie/now_playing`, {
-                params: {
-                    api_key: tmdbApi.apiKey,
-                    language: "vi-VN",
-                    page: 1
                 },
             });
             return response.data.results;
         } catch (error) {
-            console.error("❌ Lỗi khi lấy danh sách phim đang chiếu:", error.response?.data || error.message);
+            console.error(`❌ Error fetching release info for ${type} ${id}:`, error.response?.data || error.message);
             return [];
         }
     },
 
-    // 🔥 API mới: Lấy danh sách diễn viên (credits)
-    getMovieCredits: async (movieId) => {
+    getNowPlayingContent: async (type = "movie") => {
+        if (!tmdbApi.apiKey) {
+            console.error("⚠️ API Key is missing. Please set VITE_TMDB_API_KEY in .env");
+            return [];
+        }
+
+        const endpoint = type === "movie" ? "movie/now_playing" : "tv/airing_today";
+        try {
+            const response = await axios.get(`${tmdbApi.baseUrl}/${endpoint}`, {
+                params: {
+                    api_key: tmdbApi.apiKey,
+                    language: "vi-VN",
+                    page: 1,
+                },
+            });
+            return response.data.results;
+        } catch (error) {
+            console.error(`❌ Error fetching now playing ${type}:`, error.response?.data || error.message);
+            return [];
+        }
+    },
+
+    // API: Lấy danh sách diễn viên (credits cho cả movie và TV)
+    getContentCredits: async (id, type = "movie") => {
         if (!tmdbApi.apiKey) {
             console.error("⚠️ API Key is missing. Please set VITE_TMDB_API_KEY in .env");
             return { cast: [] };
         }
         try {
-            const response = await axios.get(`${tmdbApi.baseUrl}/movie/${movieId}/credits`, {
+            const response = await axios.get(`${tmdbApi.baseUrl}/${type}/${id}/credits`, {
                 params: {
                     api_key: tmdbApi.apiKey,
                 },
             });
             return response.data;
         } catch (error) {
-            console.error(`❌ Error fetching credits for movie ${movieId}:`, error.response?.data || error.message);
+            console.error(`❌ Error fetching credits for ${type} ${id}:`, error.response?.data || error.message);
             return { cast: [] };
         }
     },
 
-    // 🔥 API mới: Lấy danh sách phim gợi ý (recommendations)
-    getMovieRecommendations: async (movieId) => {
+    // API: Lấy danh sách gợi ý (recommendations cho cả movie và TV)
+    getContentRecommendations: async (id, type = "movie") => {
         if (!tmdbApi.apiKey) {
             console.error("⚠️ API Key is missing. Please set VITE_TMDB_API_KEY in .env");
             return { results: [] };
         }
         try {
-            const response = await axios.get(`${tmdbApi.baseUrl}/movie/${movieId}/recommendations`, {
+            const response = await axios.get(`${tmdbApi.baseUrl}/${type}/${id}/recommendations`, {
                 params: {
                     api_key: tmdbApi.apiKey,
                     language: "vi-VN",
@@ -171,10 +173,31 @@ const tmdbApi = {
             });
             return response.data;
         } catch (error) {
-            console.error(`❌ Error fetching recommendations for movie ${movieId}:`, error.response?.data || error.message);
+            console.error(`❌ Error fetching recommendations for ${type} ${id}:`, error.response?.data || error.message);
             return { results: [] };
         }
     },
+
+    // API: Lấy chi tiết mùa của series (TV only)
+    getTvSeasonDetails: async (seriesId, seasonNumber) => {
+        if (!tmdbApi.apiKey) {
+            console.error("⚠️ API Key is missing. Please set VITE_TMDB_API_KEY in .env");
+            return { episodes: [] };
+        }
+        try {
+            const response = await axios.get(`${tmdbApi.baseUrl}/tv/${seriesId}/season/${seasonNumber}`, {
+                params: {
+                    api_key: tmdbApi.apiKey,
+                    language: "vi-VN",
+                },
+            });
+            return response.data;
+        } catch (error) {
+            console.error(`❌ Error fetching season ${seasonNumber} for series ${seriesId}:`, error.response?.data || error.message);
+            return { episodes: [] };
+        }
+    },
+    
 };
 
 export default tmdbApi;

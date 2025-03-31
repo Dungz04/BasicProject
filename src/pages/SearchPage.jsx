@@ -16,7 +16,7 @@ const SearchPage = () => {
 
             setLoading(true);
             try {
-                const response = await tmdbApi.searchMovies(query);
+                const response = await tmdbApi.searchContent(query);
                 setSearchResults(response.results || []);
             } catch (error) {
                 console.error('Error fetching search results:', error);

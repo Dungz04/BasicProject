@@ -5,58 +5,74 @@ import "../styles/Banner.css";
 import tmdbApi from "../service/tmdbApi.jsx";
 
 const Banner = () => {
-    const [movies, setMovies] = useState([]);
+    const [content, setContent] = useState([]); // Danh sách kết hợp movies và TV shows
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [isLoading, setIsLoading] = useState(true); // State để kiểm soát Skeleton UI
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         const fetchData = async () => {
-            setIsLoading(true); // Bật Skeleton UI khi bắt đầu tải
+            setIsLoading(true);
             const trendingData = await tmdbApi.getWeeklyTrending();
-            const trendingWeekMovies = trendingData.movies;
+            const trendingMovies = trendingData.movies || [];
+            const trendingTvShows = trendingData.tvShows || [];
 
-            const getCertification = (releaseDates) => {
+            // Kết hợp movies và TV shows thành một danh sách
+            const combinedContent = [...trendingMovies, ...trendingTvShows];
+
+            const getCertification = (releaseInfo, type) => {
+                if (!releaseInfo) return "N/A";
                 const priorityCountries = ["US", "GB", "VN"];
                 for (const country of priorityCountries) {
-                    const release = releaseDates.find((r) => r.iso_3166_1 === country);
-                    if (release && release.release_dates[0]?.certification) {
-                        return release.release_dates[0].certification;
+                    const info = releaseInfo.find((r) => r.iso_3166_1 === country);
+                    if (info) {
+                        if (type === "movie" && info.release_dates?.[0]?.certification) {
+                            return info.release_dates[0].certification;
+                        } else if (type === "tv" && info.rating) {
+                            return info.rating;
+                        }
                     }
                 }
                 return "N/A";
             };
 
-            const moviesWithDetails = await Promise.all(
-                trendingWeekMovies.map(async (movie) => {
-                    const details = await tmdbApi.getMovieDetails(movie.id);
-                    const releaseDates = await tmdbApi.getMovieReleaseDates(movie.id);
-                    const certification = getCertification(releaseDates);
+            const contentWithDetails = await Promise.all(
+                combinedContent.map(async (item) => {
+                    const type = item.media_type || (item.title ? "movie" : "tv"); // Xác định loại nội dung
+                    const details = await tmdbApi.getContentDetails(item.id, type);
+                    const releaseInfo = await tmdbApi.getContentReleaseInfo(item.id, type);
+                    const certification = getCertification(releaseInfo, type);
                     const overview = details.overview ||
-                        (await tmdbApi.getMovieDetails(movie.id, { language: "en-US" })).overview ||
+                        (await tmdbApi.getContentDetails(item.id, type, { language: "en-US" })).overview ||
                         "Không có mô tả";
-                    return { ...movie, ...details, overview, certification };
+                    return {
+                        ...item,
+                        ...details,
+                        overview,
+                        certification,
+                        type, // Lưu type để xử lý sau
+                    };
                 })
             );
 
-            if (moviesWithDetails.length > 0) {
-                setMovies(moviesWithDetails);
+            if (contentWithDetails.length > 0) {
+                setContent(contentWithDetails);
                 setCurrentIndex(0);
             }
-            setIsLoading(false); // Tắt Skeleton UI khi tải xong
+            setIsLoading(false);
         };
 
         fetchData();
     }, []);
 
     useEffect(() => {
-        if (movies.length === 0) return;
+        if (content.length === 0) return;
 
         const interval = setInterval(() => {
-            setCurrentIndex((prevIndex) => (prevIndex + 1) % movies.length);
+            setCurrentIndex((prevIndex) => (prevIndex + 1) % content.length);
         }, 5000);
 
         return () => clearInterval(interval);
-    }, [movies]);
+    }, [content]);
 
     // Skeleton UI khi đang tải
     if (isLoading) {
@@ -76,28 +92,35 @@ const Banner = () => {
         );
     }
 
-    if (movies.length === 0) return <div>Loading...</div>;
+    if (content.length === 0) return <div>Loading...</div>;
 
-    const movie = movies[currentIndex];
+    const currentItem = content[currentIndex];
+
+    // Xử lý các thuộc tính khác nhau giữa movie và TV
+    const title = currentItem.title || currentItem.name;
+    const year = (currentItem.release_date || currentItem.first_air_date)?.split("-")[0];
+    const runtime = currentItem.type === "movie" 
+        ? currentItem.runtime 
+        : (currentItem.episode_run_time?.[0] || "N/A"); // Thời lượng tập đầu tiên cho TV
 
     return (
         <div
             className="banner"
             style={{
-                backgroundImage: `url(https://image.tmdb.org/t/p/original${movie.backdrop_path})`,
+                backgroundImage: `url(https://image.tmdb.org/t/p/original${currentItem.backdrop_path})`,
                 transition: "background-image 1s ease-in-out",
             }}
         >
             <div className="banner-content">
-                <h1>{movie.title}</h1>
+                <h1>{title}</h1>
                 <h4>
-                    <span>{movie.release_date?.split("-")[0]}</span>
-                    <span>{movie.vote_average.toFixed(1)}</span>
-                    <span>{movie.runtime} phút</span>
-                    <span>{movie.certification}</span>
+                    <span>{year || "N/A"}</span>
+                    <span>{currentItem.vote_average?.toFixed(1) || "N/A"}</span>
+                    <span>{runtime ? `${runtime} phút` : "N/A"}</span>
+                    <span>{currentItem.certification}</span>
                 </h4>
-                <p className="genres">{movie.genres?.map((g) => g.name).join(" • ")}</p>
-                <p className="overview">{movie.overview}</p>
+                <p className="genres">{currentItem.genres?.map((g) => g.name).join(" • ")}</p>
+                <p className="overview">{currentItem.overview}</p>
                 <div className="button-group">
                     <button className="btn play">
                         <FontAwesomeIcon icon={faPlay} /> Xem ngay
