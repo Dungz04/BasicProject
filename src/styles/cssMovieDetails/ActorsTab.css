@@ -30,13 +30,27 @@
 /* Khi chỉ có 1 diễn viên, chuyển sang flex để tránh ô trống */
 .de-actors.single-actor {
     display: flex;
-    justify-content: flex-start; /* Căn giữa diễn viên duy nhất */
+    justify-content: flex-start;
     gap: 0;
 }
 
 .de-actors.single-actor .item-actor {
-    width: 200px; /* Tăng kích thước để nổi bật hơn */
+    width: 200px;
     max-width: 100%;
+}
+
+/* Khi có 2 diễn viên, giới hạn chiều rộng và căn giữa */
+.de-actors.two-actors {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 1rem;
+    padding: 1rem;
+}
+
+.de-actors.two-actors .item-actor {
+    flex: 0 0 200px; /* Giới hạn chiều rộng của mỗi item */
+    max-width: 200px;
 }
 
 .item-actor {
@@ -53,7 +67,8 @@
 /* Hiệu ứng hover chỉ áp dụng trên thiết bị có con trỏ */
 @media (hover: hover) and (pointer: fine) {
     .item-actor:hover .v-actor img {
-        transform: scale(1.05);
+        transform: translateY(-5px);
+        transition: transform 0.3s ease;
     }
 }
 
@@ -69,7 +84,7 @@
 .item-actor .v-actor {
     display: block;
     width: 100%;
-    aspect-ratio: 2 / 3; /* Tỷ lệ ảnh 2:3 để đồng bộ */
+    aspect-ratio: 2 / 3;
 }
 
 .item-actor .v-actor img {
@@ -121,7 +136,7 @@
 
 .skeleton-image {
     width: 100%;
-    height: 225px; /* Tương ứng với aspect-ratio 2:3 */
+    height: 225px;
     border-radius: 0.5rem;
 }
 
@@ -151,9 +166,10 @@
     .de-actors {
         grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     }
-
-    .de-actors.single-actor .item-actor {
+    .de-actors.single-actor .item-actor,
+    .de-actors.two-actors .item-actor {
         width: 190px;
+        max-width: 190px;
     }
 }
 
@@ -161,9 +177,10 @@
     .de-actors {
         grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
     }
-
-    .de-actors.single-actor .item-actor {
+    .de-actors.single-actor .item-actor,
+    .de-actors.two-actors .item-actor {
         width: 180px;
+        max-width: 180px;
     }
 }
 
@@ -171,27 +188,23 @@
     .de-actors {
         grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     }
-
-    .de-actors.single-actor .item-actor {
+    .de-actors.single-actor .item-actor,
+    .de-actors.two-actors .item-actor {
         width: 160px;
+        max-width: 160px;
     }
-
     .item-actor {
         padding: 0.3rem;
     }
-
     .item-actor .v-actor img {
         height: 180px;
     }
-
     .item-actor .item-title a {
         font-size: 0.9rem;
     }
-
     .item-actor .ro-play {
         font-size: 0.8rem;
     }
-
     .skeleton-image {
         height: 180px;
     }
@@ -201,23 +214,20 @@
     .de-actors {
         grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
     }
-
-    .de-actors.single-actor .item-actor {
+    .de-actors.single-actor .item-actor,
+    .de-actors.two-actors .item-actor {
         width: 140px;
+        max-width: 140px;
     }
-
     .item-actor .v-actor img {
         height: 150px;
     }
-
     .item-actor .item-title a {
         font-size: 0.85rem;
     }
-
     .item-actor .ro-play {
         font-size: 0.75rem;
     }
-
     .skeleton-image {
         height: 150px;
     }
@@ -227,46 +237,40 @@
     .de-actors {
         grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
     }
-
-    .de-actors.single-actor .item-actor {
+    .de-actors.single-actor .item-actor,
+    .de-actors.two-actors .item-actor {
         width: 120px;
+        max-width: 120px;
     }
-
     .item-actor .v-actor img {
         height: 135px;
     }
-
     .item-actor .item-title a {
         font-size: 0.8rem;
     }
-
     .item-actor .ro-play {
         font-size: 0.7rem;
     }
-
     .skeleton-image {
         height: 135px;
     }
 }
 
-/* Xử lý cho màn hình siêu rộng (ultrawide) */
 @media (min-width: 1600px) {
     .de-actors {
         grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     }
-
-    .de-actors.single-actor .item-actor {
+    .de-actors.single-actor .item-actor,
+    .de-actors.two-actors .item-actor {
         width: 240px;
+        max-width: 240px;
     }
-
     .item-actor .v-actor img {
         height: 270px;
     }
-
     .item-actor .item-title a {
         font-size: 1.1rem;
     }
-
     .item-actor .ro-play {
         font-size: 1rem;
     }

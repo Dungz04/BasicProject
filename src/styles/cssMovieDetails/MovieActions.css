@@ -32,10 +32,11 @@
     background: linear-gradient(135deg, #ff3333, #aa0000);
     padding: 0.75rem 1.5rem;
     border-radius: 1.5rem;
-    transition: background 0.3s, transform 0.2s;
+    transition: box-shadow 0.4s, transform 0.3s;
     text-decoration: none;
     flex-shrink: 0;
     min-height: 3rem;
+    margin-left: 14px;
 }
 
 .dm-bar .button-play i {
@@ -43,9 +44,15 @@
 }
 
 .dm-bar .button-play:hover {
-    background: linear-gradient(135deg, #ff3333, #aa0000);
-    transform: scale(1.05);
+    transform: scale(1.03); /* Phóng to nhẹ */
+    box-shadow: 0 0 15px rgba(255, 51, 51, 0.7), 
+                0 0 25px rgba(255, 51, 51, 0.5); /* Viền phát sáng */
 }
+
+.dm-bar .button-play:hover i {
+    color: white;
+}
+
 
 /* Nhóm các icon */
 .dm-bar .touch-group {
@@ -96,6 +103,23 @@
     color: white;
     font-size: 0.8rem;
 }
+
+.dm-bar .item:hover {
+    transform: scale(1.05); /* Phóng to nhẹ */
+    box-shadow: 0 0 15px rgba(255, 51, 51, 0.7), 
+                0 0 25px rgba(255, 51, 51, 0.5); /* Viền phát sáng */
+    transition: box-shadow 0.4s, transform 0.3s;
+}
+
+.dm-bar .item-v:hover span,
+.dm-bar .inc-icon:hover {
+    color: white;
+}
+
+.dm-bar .inc-icon:hover svg {
+    fill: white;
+}
+
 
 /* Responsive Design */
 @media (max-width: 768px) {

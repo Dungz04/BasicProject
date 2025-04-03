@@ -6,6 +6,11 @@ const tmdbApi = {
 
     // API: Tìm kiếm cả movie và TV shows
     searchContent: async (query, type = "multi") => {
+        if (!tmdbApi.apiKey) {
+            console.error("⚠️ API Key is missing. Please set VITE_TMDB_API_KEY in .env");
+            throw new Error("API Key is missing");
+        }
+
         try {
             const response = await axios.get(`${tmdbApi.baseUrl}/search/${type}`, {
                 params: {
@@ -15,7 +20,7 @@ const tmdbApi = {
                     page: 1,
                 },
             });
-            return response.data;
+            return response.data || { results: [] };
         } catch (error) {
             console.error("❌ Failed to search content:", error.response?.data || error.message);
             throw new Error("Failed to search content");
@@ -45,15 +50,14 @@ const tmdbApi = {
             });
 
             return {
-                movies: moviesResponse.data.results,
-                tvShows: tvResponse.data.results,
+                movies: moviesResponse.data.results || [],
+                tvShows: tvResponse.data.results || [],
             };
         } catch (error) {
             console.error("❌ Error fetching weekly trending content:", error.response?.data || error.message);
             return { movies: [], tvShows: [] };
         }
     },
-
 
     // API: Lấy danh sách trending theo ngày (movie hoặc TV)
     getTrendingByDay: async (type = "movie", timeWindow = "day") => {
@@ -69,7 +73,7 @@ const tmdbApi = {
                     language: "vi-VN",
                 },
             });
-            return response.data.results;
+            return response.data.results || [];
         } catch (error) {
             console.error(`❌ Error fetching trending ${type}:`, error.response?.data || error.message);
             return [];
@@ -82,14 +86,28 @@ const tmdbApi = {
             console.error("⚠️ API Key is missing. Please set VITE_TMDB_API_KEY in .env");
             return null;
         }
+
         try {
-            const response = await axios.get(`${tmdbApi.baseUrl}/${type}/${id}`, {
+            let response = await axios.get(`${tmdbApi.baseUrl}/${type}/${id}`, {
                 params: {
                     api_key: tmdbApi.apiKey,
                     ...params,
                 },
             });
-            return response.data;
+
+            let data = response.data;
+            // Nếu không có overview (mô tả) bằng ngôn ngữ "vi-VN", thử lại với "en-US"
+            if (!data.overview) {
+                response = await axios.get(`${tmdbApi.baseUrl}/${type}/${id}`, {
+                    params: {
+                        api_key: tmdbApi.apiKey,
+                        language: "en-US",
+                    },
+                });
+                data = response.data;
+            }
+
+            return data || null;
         } catch (error) {
             console.error(`❌ Error fetching details for ${type} ${id}:`, error.response?.data || error.message);
             return null;
@@ -110,13 +128,14 @@ const tmdbApi = {
                     api_key: tmdbApi.apiKey,
                 },
             });
-            return response.data.results;
+            return response.data.results || [];
         } catch (error) {
             console.error(`❌ Error fetching release info for ${type} ${id}:`, error.response?.data || error.message);
             return [];
         }
     },
 
+    // API: Lấy danh sách phim/TV đang chiếu
     getNowPlayingContent: async (type = "movie") => {
         if (!tmdbApi.apiKey) {
             console.error("⚠️ API Key is missing. Please set VITE_TMDB_API_KEY in .env");
@@ -132,7 +151,7 @@ const tmdbApi = {
                     page: 1,
                 },
             });
-            return response.data.results;
+            return response.data.results || [];
         } catch (error) {
             console.error(`❌ Error fetching now playing ${type}:`, error.response?.data || error.message);
             return [];
@@ -145,13 +164,14 @@ const tmdbApi = {
             console.error("⚠️ API Key is missing. Please set VITE_TMDB_API_KEY in .env");
             return { cast: [] };
         }
+
         try {
             const response = await axios.get(`${tmdbApi.baseUrl}/${type}/${id}/credits`, {
                 params: {
                     api_key: tmdbApi.apiKey,
                 },
             });
-            return response.data;
+            return response.data || { cast: [] };
         } catch (error) {
             console.error(`❌ Error fetching credits for ${type} ${id}:`, error.response?.data || error.message);
             return { cast: [] };
@@ -164,6 +184,7 @@ const tmdbApi = {
             console.error("⚠️ API Key is missing. Please set VITE_TMDB_API_KEY in .env");
             return { results: [] };
         }
+
         try {
             const response = await axios.get(`${tmdbApi.baseUrl}/${type}/${id}/recommendations`, {
                 params: {
@@ -171,7 +192,7 @@ const tmdbApi = {
                     language: "vi-VN",
                 },
             });
-            return response.data;
+            return response.data || { results: [] };
         } catch (error) {
             console.error(`❌ Error fetching recommendations for ${type} ${id}:`, error.response?.data || error.message);
             return { results: [] };
@@ -184,20 +205,33 @@ const tmdbApi = {
             console.error("⚠️ API Key is missing. Please set VITE_TMDB_API_KEY in .env");
             return { episodes: [] };
         }
+
         try {
-            const response = await axios.get(`${tmdbApi.baseUrl}/tv/${seriesId}/season/${seasonNumber}`, {
+            let response = await axios.get(`${tmdbApi.baseUrl}/tv/${seriesId}/season/${seasonNumber}`, {
                 params: {
                     api_key: tmdbApi.apiKey,
                     language: "vi-VN",
                 },
             });
-            return response.data;
+
+            let data = response.data;
+            // Nếu không có episode overview bằng "vi-VN", thử lại với "en-US"
+            if (data.episodes && data.episodes.some(episode => !episode.overview)) {
+                response = await axios.get(`${tmdbApi.baseUrl}/tv/${seriesId}/season/${seasonNumber}`, {
+                    params: {
+                        api_key: tmdbApi.apiKey,
+                        language: "en-US",
+                    },
+                });
+                data = response.data;
+            }
+
+            return data || { episodes: [] };
         } catch (error) {
             console.error(`❌ Error fetching season ${seasonNumber} for series ${seriesId}:`, error.response?.data || error.message);
             return { episodes: [] };
         }
     },
-    
 };
 
 export default tmdbApi;

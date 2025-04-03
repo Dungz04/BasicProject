@@ -19,10 +19,10 @@ const Top10Movies = () => {
 
                 // Lấy trending movies và TV shows trong ngày
                 const trendingMovies = await tmdbApi.getTrendingByDay("movie", "day");
-
+                const trendingTvShows = await tmdbApi.getTrendingByDay("tv", "day");
 
                 // Kết hợp và lấy top 10 từ cả hai danh sách
-                const combinedTrending = [...trendingMovies]
+                const combinedTrending = [...trendingMovies,...trendingTvShows]
                     .sort((a, b) => b.popularity - a.popularity) // Sắp xếp theo độ phổ biến
                     .slice(0, 10); // Lấy top 10
 
