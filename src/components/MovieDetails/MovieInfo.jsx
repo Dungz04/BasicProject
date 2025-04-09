@@ -86,7 +86,7 @@ const MovieInfo = ({ movie }) => {
             <div className="detail-more" style={{ display: window.innerWidth > 768 ? "block" : "none" }}>
                 <div className="hl-tags">
                     <div className="tag-tmdb">
-                        <span>TMDB {movie.vote_average ? movie.vote_average.toFixed(1) : "N/A"}</span>
+                        <span>TMDb {movie.vote_average ? movie.vote_average.toFixed(1) : "N/A"}</span>
                     </div>
                     <div className="tag-model">
                         <span className="last">{movie.certification || "N/A"}</span>

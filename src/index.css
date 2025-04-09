@@ -1,3 +1,23 @@
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&display=swap');
 @import "tailwindcss/preflight";
+@import "tailwindcss";
 @import "tailwindcss/utilities";
+
+
+/* Định nghĩa các CSS variables toàn cục */
+:root {
+    --color-background: #141414; /* Màu nền tối (giống Netflix) */
+    --color-primary: #e50914; /* Màu đỏ chính (giống Netflix) */
+    --color-secondary: #2a2a2a; /* Màu xám tối cho các nút không active */
+}
+
+body {
+    background: linear-gradient(135deg, #111, #550000);
+    font-family: 'Lexend', sans-serif;
+}
+
+@media (max-width: 768px) {
+    body {
+        background: linear-gradient(135deg, #111, #330000);
+    }
+}

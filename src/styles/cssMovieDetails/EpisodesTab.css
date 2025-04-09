@@ -208,17 +208,17 @@
 .episode-list {
     display: flex;
     flex-wrap: wrap; /* Để các nút tự xuống dòng */
-    gap: 10px; /* Khoảng cách giữa các nút */
+    gap: 11px; /* Khoảng cách giữa các nút */
     justify-content: flex-start; /* Canh trái */
 }
 
 .episode-btn {
-    flex: 1 1 calc(12.5% - 10px); /* Mỗi nút chiếm 12.5% (1/8) trừ khoảng cách */
-    max-width: calc(12.5% - 10px); /* Giới hạn độ rộng tối đa */
-    box-sizing: border-box; /* Đảm bảo padding không làm to nút */
+    flex: 1 1 calc(16.7% - 10px); /* Mỗi nút chiếm 12.5% (1/8) trừ khoảng cách */
+    max-width: calc(16.7% - 10px); /* Giới hạn độ rộng tối đa */
+    box-sizing: border-box; /* Đảm bảo padding không làm to nút */ 
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     padding: 10px 20px;
     background: #2a2a2a;
     color: #fff;

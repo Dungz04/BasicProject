@@ -1,5 +1,4 @@
 import './App.css';
-import './index.css';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -9,6 +8,7 @@ import Login from './components/Account/Login';
 import Register from './components/Account/Register';
 import ForgotPassword from './components/Account/ForgotPassword';
 import MovieDetail from './pages/MovieDetail';
+import WatchPage from './pages/WatchPage';
 
 
 import '@fortawesome/fontawesome-free/css/all.min.css'; // Import Font Awesome
@@ -31,7 +31,14 @@ function App() {
                         <Route path="/phim-moi" element={<div>Phim mới</div>} />
                         <Route path="/phim-bo" element={<div>Phim bộ</div>} />
                         <Route path="/phim-le" element={<div>Phim lẻ</div>} />
-                        
+
+                        {/* Route cho trang xem phim */}
+                        <Route path="/xem-phim/:movieId" element={<WatchPage />} />
+                        <Route path="/xem-phim/:movieId/season/:season/episode/:episode" element={<WatchPage />} />
+
+                        {/* 404 Not Found */}
+                        <Route path="*" element={<div>404 - Trang không tồn tại</div>} /> 
+
                     </Routes>
                 </main>
                 <Footer />
