@@ -1,58 +1,22 @@
 import React, { useState, useEffect } from "react";
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlay, faInfoCircle } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faPlay, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 import "../styles/Banner.css";
-import tmdbApi from "../service/tmdbApi.jsx";
+import staticContent from "../service/staticData.jsx"; // Import dữ liệu tĩnh
 
 const Banner = () => {
-    const [content, setContent] = useState([]); // Danh sách kết hợp movies và TV shows
+    const [content, setContent] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const fetchData = async () => {
+        // Sử dụng dữ liệu tĩnh từ staticContent.js
+        const fetchStaticData = () => {
             setIsLoading(true);
-            const trendingData = await tmdbApi.getWeeklyTrending();
-            const trendingMovies = trendingData.movies || [];
-            const trendingTvShows = trendingData.tvShows || [];
-
-            // Kết hợp movies và TV shows thành một danh sách
-            const combinedContent = [...trendingMovies, ...trendingTvShows];
-
-            const getCertification = (releaseInfo, type) => {
-                if (!releaseInfo) return "N/A";
-                const priorityCountries = ["US", "GB", "VN"];
-                for (const country of priorityCountries) {
-                    const info = releaseInfo.find((r) => r.iso_3166_1 === country);
-                    if (info) {
-                        if (type === "movie" && info.release_dates?.[0]?.certification) {
-                            return info.release_dates[0].certification;
-                        } else if (type === "tv" && info.rating) {
-                            return info.rating;
-                        }
-                    }
-                }
-                return "N/A";
-            };
-
-            const contentWithDetails = await Promise.all(
-                combinedContent.map(async (item) => {
-                    const type = item.media_type || (item.title ? "movie" : "tv"); // Xác định loại nội dung
-                    const details = await tmdbApi.getContentDetails(item.id, type);
-                    const releaseInfo = await tmdbApi.getContentReleaseInfo(item.id, type);
-                    const certification = getCertification(releaseInfo, type);
-                    const overview = details.overview ||
-                        (await tmdbApi.getContentDetails(item.id, type, { language: "en-US" })).overview ||
-                        "Không có mô tả";
-                    return {
-                        ...item,
-                        ...details,
-                        overview,
-                        certification,
-                        type, // Lưu type để xử lý sau
-                    };
-                })
-            );
+            const contentWithDetails = staticContent.map((item) => ({
+                ...item,
+                type: item.media_type || (item.title ? "movie" : "tv"), // Xác định loại nội dung
+            }));
 
             if (contentWithDetails.length > 0) {
                 setContent(contentWithDetails);
@@ -61,7 +25,7 @@ const Banner = () => {
             setIsLoading(false);
         };
 
-        fetchData();
+        fetchStaticData();
     }, []);
 
     useEffect(() => {
@@ -99,15 +63,16 @@ const Banner = () => {
     // Xử lý các thuộc tính khác nhau giữa movie và TV
     const title = currentItem.title || currentItem.name;
     const year = (currentItem.release_date || currentItem.first_air_date)?.split("-")[0];
-    const runtime = currentItem.type === "movie" 
-        ? currentItem.runtime 
-        : (currentItem.episode_run_time?.[0] || "N/A"); // Thời lượng tập đầu tiên cho TV
+    const runtime =
+        currentItem.type === "movie"
+            ? currentItem.runtime
+            : currentItem.episode_run_time?.[0] || "N/A";
 
     return (
         <div
             className="banner"
             style={{
-                backgroundImage: `url(https://image.tmdb.org/t/p/original${currentItem.backdrop_path})`,
+                backgroundImage: `url(${currentItem.backdrop_path})`, // Sử dụng ảnh đã import
                 transition: "background-image 1s ease-in-out",
             }}
         >

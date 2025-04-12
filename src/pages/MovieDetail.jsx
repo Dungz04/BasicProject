@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useLocation } from 'react-router-dom';
 import tmdbApi from "../service/tmdbApi";
-import "materialize-css/dist/css/materialize.min.css";
+// import "materialize-css/dist/css/materialize.min.css";
 import "../styles/cssMovieDetails/MovieDetail.css";
 import MovieInfo from "../components/MovieDetails/MovieInfo";
 import MovieActions from "../components/MovieDetails/MovieActions";

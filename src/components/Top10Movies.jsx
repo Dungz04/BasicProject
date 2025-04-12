@@ -6,47 +6,30 @@ import "swiper/css/navigation";
 import "swiper/css/pagination";
 import "../styles/Top10Movies.css";
 import { Link } from "react-router-dom";
-import tmdbApi from "../service/tmdbApi"; // Đường dẫn giữ nguyên nếu đúng
+import staticContent from "../service/staticData"; // Import dữ liệu tĩnh
 
 const Top10Movies = () => {
-    const [content, setContent] = useState([]); // Đổi tên để phản ánh cả movie và TV
+    const [content, setContent] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                setLoading(true);
+        const fetchStaticData = () => {
+            setLoading(true);
 
-                // Lấy trending movies và TV shows trong ngày
-                const trendingMovies = await tmdbApi.getTrendingByDay("movie", "day");
-                const trendingTvShows = await tmdbApi.getTrendingByDay("tv", "day");
+            // Sắp xếp theo popularity và lấy top 10
+            const top10Content = staticContent
+                .sort((a, b) => b.popularity - a.popularity) // Sắp xếp giảm dần
+                .slice(0, 10) // Lấy 10 mục đầu tiên
+                .map((item) => ({
+                    ...item,
+                    type: item.media_type || (item.title ? "movie" : "tv"),
+                }));
 
-                // Kết hợp và lấy top 10 từ cả hai danh sách
-                const combinedTrending = [...trendingMovies,...trendingTvShows]
-                    .sort((a, b) => b.popularity - a.popularity) // Sắp xếp theo độ phổ biến
-                    .slice(0, 10); // Lấy top 10
-
-                const contentWithDetails = await Promise.all(
-                    combinedTrending.map(async (item) => {
-                        const type = item.title ? "movie" : "tv"; // Xác định loại nội dung
-                        const details = await tmdbApi.getContentDetails(item.id, type);
-                        const releaseInfo = await tmdbApi.getContentReleaseInfo(item.id, type);
-                        const certification = releaseInfo.find((r) => r.iso_3166_1 === "US")?.[
-                            type === "movie" ? "release_dates" : "rating"
-                        ]?.[type === "movie" ? 0 : ""]?.[type === "movie" ? "certification" : ""] || "N/A";
-                        return { ...item, ...details, certification, type };
-                    })
-                );
-
-                console.log("Top 10 Content with Details:", contentWithDetails);
-                setContent(contentWithDetails);
-            } catch (error) {
-                console.error("Lỗi khi lấy dữ liệu:", error);
-            } finally {
-                setLoading(false);
-            }
+            setContent(top10Content);
+            setLoading(false);
         };
-        fetchData();
+
+        fetchStaticData();
     }, []);
 
     if (loading) {
@@ -112,15 +95,22 @@ const Top10Movies = () => {
                                     <div
                                         className="movie-image"
                                         style={{
-                                            backgroundImage: `url(https://image.tmdb.org/t/p/w500${item.poster_path})`,
+                                            backgroundImage: `url(${item.poster_path})`, // Dùng ảnh từ assets
                                         }}
                                     />
                                     <div className="movie-info">
                                         <p className="title">{title}</p>
                                         <p className="details">
-                                            ⭐ <span className={item.vote_average >= 7 ? "text-green-500" : "text-yellow-500"}>
+                                            ⭐{" "}
+                                            <span
+                                                className={
+                                                    item.vote_average >= 7
+                                                        ? "text-green-500"
+                                                        : "text-yellow-500"
+                                                }
+                                            >
                                                 {item.vote_average.toFixed(1)}
-                                            </span> ({item.vote_count} lượt)
+                                            </span>
                                         </p>
                                         <p className="details">📅 Năm: {year}</p>
                                         <p className="details">🔞 Độ tuổi: {item.certification}</p>

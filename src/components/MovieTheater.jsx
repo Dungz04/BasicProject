@@ -6,42 +6,30 @@ import "swiper/css/navigation";
 import "swiper/css/pagination";
 import "../styles/MovieTheater.css";
 import { Link } from "react-router-dom";
-import tmdbApi from "../service/tmdbApi";
+import staticContent from "../service/staticData"; 
 
 const MovieTheater = () => {
     const [movies, setMovies] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchMovies = async () => {
-            try {
-                setLoading(true);
-                const nowPlaying = await tmdbApi.getNowPlayingContent();
-                const movieDetails = await Promise.all(
-                    nowPlaying.map(async (movie) => {
-                        const details = await tmdbApi.getContentDetails(movie.id);
-                        const releaseDates = await tmdbApi.getContentReleaseInfo(movie.id);
-                        const certificationData = releaseDates.find(item => item.iso_3166_1 === "US");
-                        const certification = certificationData?.release_dates?.[0]?.certification || "N/A";
+        const fetchStaticMovies = () => {
+            setLoading(true);
+            const movieDetails = staticContent.map((movie) => ({
+                ...movie,
+                title: movie.title || movie.name, // Đảm bảo title luôn có giá trị
+                releaseYear: (movie.release_date || movie.first_air_date)?.split("-")[0],
+                runtime:
+                    movie.media_type === "movie"
+                        ? movie.runtime
+                        : movie.episode_run_time?.[0] || "N/A",
+            }));
 
-                        return {
-                            ...movie,
-                            runtime: details.runtime,
-                            releaseYear: movie.release_date?.split("-")[0],
-                            certification: certification,
-                        };
-                    })
-                );
-
-                setMovies(movieDetails);
-            } catch (error) {
-                console.error("Lỗi khi gọi API:", error);
-            } finally {
-                setLoading(false);
-            }
+            setMovies(movieDetails);
+            setLoading(false);
         };
 
-        fetchMovies();
+        fetchStaticMovies();
     }, []);
 
     if (loading) {
@@ -84,7 +72,6 @@ const MovieTheater = () => {
         );
     }
 
-    // Nếu không có phim, hiển thị thông báo
     if (movies.length === 0) {
         return (
             <section className="movie-section">
@@ -101,7 +88,6 @@ const MovieTheater = () => {
             <div className="section-header">
                 <h2>Phim Chiếu Rạp</h2>
             </div>
-
             <Swiper
                 modules={[Navigation, Pagination, Autoplay]}
                 spaceBetween={15}
@@ -109,11 +95,11 @@ const MovieTheater = () => {
                 navigation
                 pagination={{ clickable: true }}
                 autoplay={{
-                    delay: 3000, // Trượt mỗi 3 giây
-                    disableOnInteraction: false, // Không dừng khi người dùng tương tác
-                    pauseOnMouseEnter: false, // Không dừng khi hover (tùy chọn)
+                    delay: 3000,
+                    disableOnInteraction: false,
+                    pauseOnMouseEnter: false,
                 }}
-                loop={true} // Trượt không giới hạn
+                loop={true}
                 breakpoints={{
                     320: { slidesPerView: 1, spaceBetween: 10 },
                     768: { slidesPerView: 2, spaceBetween: 15 },
@@ -124,23 +110,33 @@ const MovieTheater = () => {
                     <SwiperSlide key={movie.id}>
                         <Link to={`/phim/${movie.id}`} className="movie">
                             <img
-                                src={`https://image.tmdb.org/t/p/original${movie.backdrop_path}`}
+                                src={movie.backdrop_path}
                                 className="movie-bg"
                                 alt={movie.title}
                                 loading="lazy"
                             />
                             <div className="movie-overlay">
                                 <img
-                                    src={`https://image.tmdb.org/t/p/w200${movie.poster_path}`}
+                                    src={movie.poster_path}
                                     className="movie-poster"
                                     alt={movie.title}
                                     loading="lazy"
                                 />
                                 <div className="movie-info">
                                     <h3>{movie.title}</h3>
-                                    <p>{movie.certification} • {movie.releaseYear} • {movie.runtime} phút</p>
+                                    <p>
+                                        {movie.certification} • {movie.releaseYear} •{" "}
+                                        {movie.runtime} {movie.runtime !== "N/A" ? "phút" : ""}
+                                    </p>
                                     <p className="details-tt">
-                                    TMDb <span className={movie.vote_average >= 7 ? "text-green-500" : "text-yellow-500"}>
+                                        TMDb{" "}
+                                        <span
+                                            className={
+                                                movie.vote_average >= 7
+                                                    ? "text-green-500"
+                                                    : "text-yellow-500"
+                                            }
+                                        >
                                             {movie.vote_average.toFixed(1)}
                                         </span>
                                     </p>

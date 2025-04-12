@@ -1,7 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&display=swap');
-@import "tailwindcss/preflight";
+
+/* @import "tailwindcss/preflight"; */
 @import "tailwindcss";
-@import "tailwindcss/utilities";
+/* @import "tailwindcss/utilities"; */
 
 
 /* Định nghĩa các CSS variables toàn cục */

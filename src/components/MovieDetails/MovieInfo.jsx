@@ -79,7 +79,7 @@ const MovieInfo = ({ movie }) => {
             </div>
             <h2 className="heading-md media-name">{title}</h2>
             <div className="alias-name">{originalTitle}</div>
-            <div id="toggle-detail" className="btn btn-block btn-basic primary-text mb-2" onClick={toggleDetail}>
+            <div id="toggle-detail" className="btn btn-block btn-basic primary-text mb-2 text-center" onClick={toggleDetail}>
                 <span>Thông tin {isSeries ? "series" : "phim"}</span>
                 <i className="fa-solid fa-angle-down ms-2" />
             </div>
@@ -88,15 +88,19 @@ const MovieInfo = ({ movie }) => {
                     <div className="tag-tmdb">
                         <span>TMDb {movie.vote_average ? movie.vote_average.toFixed(1) : "N/A"}</span>
                     </div>
+
                     <div className="tag-model">
                         <span className="last">{movie.certification || "N/A"}</span>
                     </div>
+
                     <div className="tag-classic">
                         <span>{releaseYear}</span>
                     </div>
+
                     <div className="tag-classic">
                         <span>{duration}</span>
                     </div>
+                    
                 </div>
                 <div className="hl-tags mb-4">
                     {movie.genres?.length > 0 ? (
