@@ -1,4 +1,3 @@
-
 /* @import "tailwindcss/preflight"; */
 @import "tailwindcss";
 /* @import "tailwindcss/utilities"; */
@@ -6,18 +5,53 @@
 
 /* Định nghĩa các CSS variables toàn cục */
 :root {
-    --color-background: #141414; /* Màu nền tối (giống Netflix) */
-    --color-primary: #e50914; /* Màu đỏ chính (giống Netflix) */
-    --color-secondary: #2a2a2a; /* Màu xám tối cho các nút không active */
+    --color-background: #141414;
+    --color-primary: #e50914;
+    --color-secondary: #2a2a2a;
 }
 
-body {
+/* Đảm bảo body và các container cấp cao có thể cuộn */
+html, body {
+    overflow: auto !important;
+    height: auto;
+    -webkit-overflow-scrolling: touch;
     background: linear-gradient(135deg, #111, #550000);
     font-family: 'Lexend', sans-serif;
+}
+
+/* Đảm bảo header không gây vấn đề */
+header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    z-index: 100;
+    background: rgba(0, 0, 0, 0.5);
+    box-sizing: border-box;
+}
+
+/* Đảm bảo Banner tương thích */
+.banner {
+    min-height: calc(100vh - 60px);
+    overflow: visible !important;
 }
 
 @media (max-width: 768px) {
     body {
         background: linear-gradient(135deg, #111, #330000);
+    }
+    .banner {
+        margin-top: 60px;
+        min-height: calc(80vh - 60px);
+        overflow: visible !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .banner {
+        margin-top: 60px;
+        min-height: calc(60vh - 60px);
+        overflow: visible !important;
     }
 }

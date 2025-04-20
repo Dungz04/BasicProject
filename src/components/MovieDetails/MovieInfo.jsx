@@ -84,6 +84,7 @@ const MovieInfo = ({ movie }) => {
                 <i className="fa-solid fa-angle-down ms-2" />
             </div>
             <div className="detail-more" style={{ display: window.innerWidth > 768 ? "block" : "none" }}>
+                
                 <div className="hl-tags">
                     <div className="tag-tmdb">
                         <span>TMDb {movie.vote_average ? movie.vote_average.toFixed(1) : "N/A"}</span>
@@ -105,7 +106,8 @@ const MovieInfo = ({ movie }) => {
                 <div className="hl-tags mb-4">
                     {movie.genres?.length > 0 ? (
                         movie.genres.map((genre) => (
-                            <a key={genre.id} className="tag-topic" href={`/the-loai/${genre.name.toLowerCase()}`}>
+                            <a key={genre.id} className="tag-topic" >
+                                {/* href={`/the-loai/${genre.name.toLowerCase()}`} */}
                                 {genre.name}
                             </a>
                         ))
@@ -133,7 +135,8 @@ const MovieInfo = ({ movie }) => {
                         {displayCountries.length > 0 ? (
                             displayCountries.map((countryName, index) => (
                                 <span key={countryName}>
-                                    <a href={`/quoc-gia/${(isSeries ? countries[index] : countryName).toLowerCase()}`}>
+                                    <a > 
+                                        {/* href={`/quoc-gia/${(isSeries ? countries[index] : countryName).toLowerCase()}`} */}
                                         {countryName}
                                     </a>
                                     {index < displayCountries.length - 1 && " • "}

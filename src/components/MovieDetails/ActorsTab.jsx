@@ -56,7 +56,7 @@ const ActorsTab = ({ actors = [], active, loading = false }) => {
                                     <div className="v-item">
                                         <a
                                             className="v-actor"
-                                            href={`/dien-vien/${actor.id}`}
+                                            // href={`/dien-vien/${actor.id}`}
                                             aria-label={`Xem thông tin diễn viên ${actor.name}`}
                                         >
                                             <img

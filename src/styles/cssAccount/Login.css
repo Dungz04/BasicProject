@@ -90,7 +90,7 @@ h2 {
 }
 
 .register-text a {
-    color: #ff3333;
+    color: #e50914;
     text-decoration: none;
 }
 
@@ -100,7 +100,7 @@ h2 {
 
 .forgot-password {
     text-align: center;
-    color: #550000;
+    color: #e50914;
     margin-top: 0.5rem;
     cursor: pointer;
 }

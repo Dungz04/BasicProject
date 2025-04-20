@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useLocation } from 'react-router-dom';
 import tmdbApi from "../service/tmdbApi";
-// import "materialize-css/dist/css/materialize.min.css";
 import "../styles/cssMovieDetails/MovieDetail.css";
 import MovieInfo from "../components/MovieDetails/MovieInfo";
 import MovieActions from "../components/MovieDetails/MovieActions";
@@ -11,7 +10,7 @@ const MovieDetail = () => {
     const { movieId } = useParams();
     const location = useLocation();
     const queryParams = new URLSearchParams(location.search);
-    const type = queryParams.get("type") || "movie"; // Lấy type từ query
+    const initialType = queryParams.get("type") || "movie";
 
     const [content, setContent] = useState(null);
     const [actors, setActors] = useState([]);
@@ -19,11 +18,12 @@ const MovieDetail = () => {
     const [activeTab, setActiveTab] = useState("episodes");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [type, setType] = useState(initialType);
 
     useEffect(() => {
         const fetchContentData = async () => {
-            if (!movieId) {
-                setError("Không tìm thấy ID nội dung");
+            if (!movieId || isNaN(movieId)) {
+                setError("ID nội dung không hợp lệ");
                 setLoading(false);
                 return;
             }
@@ -31,39 +31,43 @@ const MovieDetail = () => {
             try {
                 setLoading(true);
                 setError(null);
+                console.log("Đang lấy chi tiết:", { movieId, type });
 
-                // Lấy chi tiết nội dung (movie hoặc tv)
-                const contentDetails = await tmdbApi.getContentDetails(movieId, type);
+                let contentDetails = await tmdbApi.getContentDetails(movieId, type);
+                let finalType = type;
+
                 if (!contentDetails) {
-                    throw new Error("Không tìm thấy nội dung");
+                    console.log("Thử loại nội dung khác...");
+                    finalType = type === "movie" ? "tv" : "movie";
+                    contentDetails = await tmdbApi.getContentDetails(movieId, finalType);
+                    if (!contentDetails) {
+                        throw new Error("Không tìm thấy nội dung");
+                    }
                 }
 
-                // Lấy thông tin độ tuổi
-                const releaseInfo = await tmdbApi.getContentReleaseInfo(movieId, type);
-                const certification = releaseInfo.find((r) => r.iso_3166_1 === "US")?.[
-                    type === "movie" ? "release_dates" : "rating"
-                ]?.[type === "movie" ? 0 : ""]?.[type === "movie" ? "certification" : ""] || "N/A";
+                const releaseInfo = await tmdbApi.getContentReleaseInfo(movieId, finalType);
+                let certification = "N/A";
+                if (finalType === "movie") {
+                    const usRelease = releaseInfo.find((r) => r.iso_3166_1 === "US");
+                    certification = usRelease?.release_dates?.[0]?.certification || "N/A";
+                } else {
+                    const usRating = releaseInfo.find((r) => r.iso_3166_1 === "US");
+                    certification = usRating?.rating || "N/A";
+                }
 
-                // Lấy danh sách diễn viên
-                const credits = await tmdbApi.getContentCredits(movieId, type);
+                const credits = await tmdbApi.getContentCredits(movieId, finalType);
                 const actorsList = credits?.cast.slice(0, 8) || [];
 
-                // Lấy danh sách gợi ý
-                const recommended = await tmdbApi.getContentRecommendations(movieId, type);
+                const recommended = await tmdbApi.getContentRecommendations(movieId, finalType);
                 const recommendedList = recommended?.results.slice(0, 8) || [];
 
-                console.log("Content Details:", contentDetails);
-                console.log("Credits:", credits);
-                console.log("Actors List:", actorsList);
-                console.log("Recommendations:", recommended);
-                console.log("Recommended List:", recommendedList);
-
-                setContent({ ...contentDetails, certification, type });
+                setContent({ ...contentDetails, certification, type: finalType });
                 setActors(actorsList);
                 setRecommendations(recommendedList);
+                setType(finalType);
             } catch (err) {
                 console.error("Lỗi khi lấy dữ liệu:", err);
-                setError("Không thể tải chi tiết nội dung. Vui lòng thử lại sau.");
+                setError(`Không tìm thấy nội dung với ID ${movieId}. Vui lòng kiểm tra lại.`);
             } finally {
                 setLoading(false);
             }
@@ -109,7 +113,7 @@ const MovieDetail = () => {
                             <MovieInfo movie={content} />
                         </div>
                         <div className="dc-main">
-                            <MovieActions movieId={content.id} />
+                            <MovieActions movieId={content.id} type={type} />
                             <TabsContent
                                 activeTab={activeTab}
                                 setActiveTab={setActiveTab}

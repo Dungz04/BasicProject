@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom"; // Import useNavigate
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlay, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 import "../styles/Banner.css";
@@ -8,6 +9,7 @@ const Banner = () => {
     const [content, setContent] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
+    const navigate = useNavigate(); // Khởi tạo useNavigate
 
     useEffect(() => {
         // Sử dụng dữ liệu tĩnh từ staticContent.js
@@ -37,6 +39,30 @@ const Banner = () => {
 
         return () => clearInterval(interval);
     }, [content]);
+
+    // Logic cho nút "Xem ngay"
+    const handlePlayClick = () => {
+        const currentItem = content[currentIndex];
+        if (currentItem && currentItem.id) {
+            // Điều hướng đến trang phát video, ví dụ: /watch/:id
+            navigate(`/xem-phim/${currentItem.id}?type=${currentItem.type}`);
+        } else {
+            console.error("Không có dữ liệu để phát video");
+            // Có thể hiển thị thông báo lỗi nếu cần
+        }
+    };
+
+    // Logic cho nút "Chi tiết"
+    const handleDetailsClick = () => {
+        const currentItem = content[currentIndex];
+        if (currentItem && currentItem.id) {
+            // Điều hướng đến trang chi tiết, ví dụ: /movie/:id hoặc /tv/:id
+            navigate(`/phim/${currentItem.id}`);
+        } else {
+            console.error("Không có dữ liệu để xem chi tiết");
+            // Có thể hiển thị thông báo lỗi nếu cần
+        }
+    };
 
     // Skeleton UI khi đang tải
     if (isLoading) {
@@ -87,10 +113,10 @@ const Banner = () => {
                 <p className="genres">{currentItem.genres?.map((g) => g.name).join(" • ")}</p>
                 <p className="overview">{currentItem.overview}</p>
                 <div className="button-group">
-                    <button className="btn play">
+                    <button className="btn play" onClick={handlePlayClick}>
                         <FontAwesomeIcon icon={faPlay} /> Xem ngay
                     </button>
-                    <button className="btn list">
+                    <button className="btn list" onClick={handleDetailsClick}>
                         <FontAwesomeIcon icon={faInfoCircle} /> Chi tiết
                     </button>
                 </div>
