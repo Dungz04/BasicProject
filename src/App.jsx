@@ -1,5 +1,5 @@
+import { useState } from 'react';
 import './App.css';
-// import './index.css';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -10,38 +10,36 @@ import Register from './components/Account/Register';
 import ForgotPassword from './components/Account/ForgotPassword';
 import MovieDetail from './pages/MovieDetail';
 import WatchPage from './pages/WatchPage';
-import NewMovies from './pages/NewMovies'
-import TVSeries from './pages/TVSeries'
-import SingleMovie from './pages/SingleMovie'
+import NewMovies from './pages/NewMovies';
+import TVShows from './pages/TVShows';
+import SingleMovie from './pages/SingleMovie';
+import User from './pages/User';
 
-import '@fortawesome/fontawesome-free/css/all.min.css'; // Import Font Awesome
-
+import '@fortawesome/fontawesome-free/css/all.min.css';
 
 function App() {
+    const [activeTab, setActiveTab] = useState('profile');
+
     return (
         <div className="app">
             <Router>
-                <Navbar />
+                <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
                 <main>
                     <Routes>
-                        <Route path="/" element={<Home />} /> {/* Route mặc định trỏ đến Home */}
-                        <Route path="/home" element={<Home />} /> {/* Chuẩn hóa tên route */}
-                        <Route path="/login" element={<Login />} /> {/* Thêm route cho Login */}
-                        <Route path="/register" element={<Register />} /> {/* Thêm route cho Register */}
+                        <Route path="/" element={<Home />} />
+                        <Route path="/home" element={<Home />} />
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/register" element={<Register />} />
                         <Route path='/forgot-password' element={<ForgotPassword />} />
-                        <Route path="/phim/:movieId" element={<MovieDetail />} /> {/* Route cho MovieDetail */}
+                        <Route path="/phim/:movieId" element={<MovieDetail />} />
                         <Route path="/search" element={<SearchPage />} />
                         <Route path="/phim-moi" element={<NewMovies />} />
-                        <Route path="/phim-bo" element={<TVSeries />} />
+                        <Route path="/tv-shows" element={<TVShows />} />
                         <Route path="/phim-le" element={<SingleMovie />} />
-
-                        {/* Route cho trang xem phim */}
+                        <Route path="/user" element={<User activeTab={activeTab} setActiveTab={setActiveTab} />} />
                         <Route path="/xem-phim/:movieId" element={<WatchPage />} />
                         <Route path="/xem-phim/:movieId/season/:season/episode/:episode" element={<WatchPage />} />
-
-                        {/* 404 Not Found */}
-                        <Route path="*" element={<div>404 - Trang không tồn tại</div>} /> 
-
+                        <Route path="*" element={<div>404 - Trang không tồn tại</div>} />
                     </Routes>
                 </main>
                 <Footer />

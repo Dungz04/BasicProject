@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import tmdbApi from '../service/tmdbApi';
 
-const TVSeries = () => {
+const TVShows = () => {
     const [series, setSeries] = useState([]);
     const [seriesPage, setSeriesPage] = useState(1);
     const [seriesTotalPages, setSeriesTotalPages] = useState(1);
@@ -309,4 +309,4 @@ const TVSeries = () => {
     );
 };
 
-export default TVSeries;
+export default TVShows;
