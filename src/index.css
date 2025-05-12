@@ -11,7 +11,8 @@
 }
 
 /* Đảm bảo body và các container cấp cao có thể cuộn */
-html, body {
+html,
+body {
     overflow: auto !important;
     height: auto;
     -webkit-overflow-scrolling: touch;
@@ -42,6 +43,7 @@ header {
     z-index: 9999 !important;
     top: 70px !important;
 }
+
 .Toastify__toast {
     background-color: var(--color-secondary) !important;
     color: #ffffff !important;
@@ -49,25 +51,31 @@ header {
     font-family: 'Lexend', sans-serif !important;
     z-index: 9999 !important;
 }
+
 .Toastify__toast--success {
     background-color: var(--color-secondary) !important;
     color: #ffffff !important;
     border-left: 4px solid var(--color-primary) !important;
 }
+
 .Toastify__toast--error {
     background-color: var(--color-secondary) !important;
     color: #ffffff !important;
     border-left: 4px solid var(--color-primary) !important;
 }
+
 .Toastify__toast-body {
     font-size: 14px !important;
 }
+
 .Toastify__progress-bar {
     background-color: var(--color-primary) !important;
 }
+
 .Toastify__progress-bar--success {
     background-color: var(--color-primary) !important;
 }
+
 .Toastify__progress-bar--error {
     background-color: var(--color-primary) !important;
 }
@@ -76,11 +84,13 @@ header {
     body {
         background: linear-gradient(135deg, #111, #330000);
     }
+
     .banner {
         margin-top: 60px;
         min-height: calc(80vh - 60px);
         overflow: visible !important;
     }
+
     .Toastify__toast-container {
         top: 70px !important;
         z-index: 9999 !important;
@@ -93,8 +103,21 @@ header {
         min-height: calc(60vh - 60px);
         overflow: visible !important;
     }
+
     .Toastify__toast-container {
         top: 70px !important;
         z-index: 9999 !important;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }

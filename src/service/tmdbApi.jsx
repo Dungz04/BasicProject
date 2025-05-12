@@ -256,6 +256,36 @@ const tmdbApi = {
         }
     },
 
+    // API: Lấy danh sách video (trailers, teasers, etc.) cho movie hoặc TV
+    getContentVideos: async (id, type = "movie") => {
+        tmdbApi.ensureApiKey();
+
+        if (!id || isNaN(id)) {
+            console.error("⚠️ Invalid content ID");
+            throw new Error("ID nội dung không hợp lệ");
+        }
+
+        if (!["movie", "tv"].includes(type)) {
+            console.error("⚠️ Invalid content type");
+            throw new Error("Loại nội dung không hợp lệ");
+        }
+
+        try {
+            const response = await axios.get(`${tmdbApi.baseUrl}/${type}/${id}/videos`, {
+                params: {
+                    api_key: tmdbApi.apiKey,
+                },
+            });
+            if (process.env.NODE_ENV !== "production") {
+                console.log(`API response for ${type}/${id}/videos:`, response.data);
+            }
+            return response.data || { results: [] };
+        } catch (error) {
+            console.error(`❌ Error fetching videos for ${type} ${id}:`, error.response?.data || error.message);
+            throw new Error(`Không thể lấy danh sách video cho ${type} ${id}`);
+        }
+    },
+
     // API: Lấy chi tiết mùa của series (TV only)
     getTvSeasonDetails: async (seriesId, seasonNumber) => {
         tmdbApi.ensureApiKey();

@@ -98,12 +98,12 @@ const MovieDetail = () => {
                 <div className="top-detail-wrap">
                     <div
                         className="background-fade"
-                        style={{ backgroundImage: `url(https://image.tmdb.org/t/p/original${content.backdrop_path || "/default-backdrop.jpg"})` }}
+                        style={{ backgroundImage: `url(https://image.tmdb.org/t/p/original${content.backdrop_path || "C:\Users\BasicProject\src\assets\Backdrops\default_drop.jpg"})` }}
                     />
                     <div className="cover-fade">
                         <div
                             className="cover-image"
-                            style={{ backgroundImage: `url(https://image.tmdb.org/t/p/original${content.backdrop_path || "/default-backdrop.jpg"})` }}
+                            style={{ backgroundImage: `url(https://image.tmdb.org/t/p/original${content.backdrop_path || "C:\Users\BasicProject\src\assets\Backdrops\default_drop.jpg"})` }}
                         />
                     </div>
                 </div>

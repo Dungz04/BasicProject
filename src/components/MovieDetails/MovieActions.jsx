@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { auth, db } from "../../service/firebase";
 import { doc, getDoc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
+import tmdbApi from "../../service/tmdbApi";
 
 const MovieActions = ({ movieId, type }) => {
     const [user] = useAuthState(auth);
@@ -9,10 +10,15 @@ const MovieActions = ({ movieId, type }) => {
     const [playlists, setPlaylists] = useState([]);
     const [showDropdown, setShowDropdown] = useState(false);
     const [newPlaylistName, setNewPlaylistName] = useState("");
+    const [trailerUrl, setTrailerUrl] = useState(null);
+    const [showTrailerPopup, setShowTrailerPopup] = useState(false);
+    const [trailerLoading, setTrailerLoading] = useState(false);
+    const [trailerError, setTrailerError] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const popupRef = useRef(null);
 
-    const watchUrl = type === "tv" 
+    const watchUrl = type === "tv"
         ? `/xem-phim/${movieId}/season/1/episode/1?type=tv`
         : `/xem-phim/${movieId}?type=movie`;
 
@@ -20,26 +26,59 @@ const MovieActions = ({ movieId, type }) => {
         if (!user) {
             setIsFavorite(false);
             setPlaylists([]);
+            setTrailerUrl(null);
             return;
         }
 
-        const fetchUserData = async () => {
+        const fetchData = async () => {
+            const parsedId = parseInt(movieId, 10);
+            if (isNaN(parsedId)) {
+                setTrailerError("ID nội dung không hợp lệ");
+                setError("ID nội dung không hợp lệ");
+                return;
+            }
+
             try {
+                setTrailerLoading(true);
                 const userDocRef = doc(db, "users", user.uid);
-                const userDoc = await getDoc(userDocRef);
+
+                const [userDoc, videos] = await Promise.all([
+                    getDoc(userDocRef),
+                    tmdbApi.getContentVideos(parsedId, type),
+                ]);
+
+                // Xử lý dữ liệu người dùng
                 if (userDoc.exists()) {
                     const userData = userDoc.data();
                     const favorites = userData.favorites || [];
-                    setIsFavorite(favorites.some((item) => item.movieId === movieId && item.type === type));
+                    setIsFavorite(favorites.some((item) => item.movieId === parsedId && item.type === type));
                     setPlaylists(userData.playlists || []);
                 }
+
+                // Xử lý trailer
+                if (process.env.NODE_ENV !== "production") {
+                    console.log(`Videos for ${type} ${parsedId}:`, videos.results);
+                }
+                const video = videos.results.find(
+                    (v) => v.type === "Trailer" && v.site === "YouTube"
+                ) || videos.results.find(
+                    (v) => v.type === "Teaser" && v.site === "YouTube"
+                );
+                if (video) {
+                    setTrailerUrl(`https://www.youtube.com/embed/${video.key}?autoplay=1&modestbranding=1&fs=1&autohide=1`);
+                } else {
+                    setTrailerError("Không tìm thấy trailer hoặc teaser trên YouTube.");
+                }
             } catch (err) {
-                console.error("Lỗi lấy dữ liệu người dùng:", err);
-                setError("Không thể tải dữ liệu người dùng.");
+                console.error(`Lỗi lấy dữ liệu cho ${type} ${movieId}:`, err);
+                setError("Không thể tải dữ liệu người dùng hoặc trailer.");
+                setTrailerError(err.message || "Không thể tải trailer.");
+            } finally {
+                setTrailerLoading(false);
             }
         };
 
-        fetchUserData();
+        fetchData();
     }, [user, movieId, type]);
 
     const handleToggleFavorite = async () => {
@@ -49,9 +88,8 @@ const MovieActions = ({ movieId, type }) => {
         }
 
         const userDocRef = doc(db, "users", user.uid);
-        const movieData = { movieId, type };
+        const movieData = { movieId: parseInt(movieId, 10), type };
 
-        // Đổi trạng thái ngay lập tức
         const previousState = isFavorite;
         setIsFavorite(!previousState);
 
@@ -64,7 +102,6 @@ const MovieActions = ({ movieId, type }) => {
         } catch (err) {
             console.error("Lỗi cập nhật yêu thích:", err);
             setError("Không thể cập nhật danh sách yêu thích.");
-            // Nếu lỗi thì rollback lại trạng thái ban đầu
             setIsFavorite(previousState);
         }
     };
@@ -78,7 +115,7 @@ const MovieActions = ({ movieId, type }) => {
         setLoading(true);
         setError(null);
         const userDocRef = doc(db, "users", user.uid);
-        const movieData = { movieId, type };
+        const movieData = { movieId: parseInt(movieId, 10), type };
 
         try {
             const updatedPlaylists = playlists.map((playlist) =>
@@ -114,7 +151,7 @@ const MovieActions = ({ movieId, type }) => {
         const newPlaylist = {
             id: Date.now().toString(),
             name: newPlaylistName,
-            movies: [{ movieId, type }],
+            movies: [{ movieId: parseInt(movieId, 10), type }],
         };
 
         try {
@@ -130,16 +167,60 @@ const MovieActions = ({ movieId, type }) => {
         }
     };
 
+    const handleOpenTrailer = () => {
+        if (!trailerUrl) {
+            setError(trailerError || "Không tìm thấy trailer cho nội dung này.");
+            return;
+        }
+        setShowTrailerPopup(true);
+    };
+
+    const handleCloseTrailer = () => {
+        setShowTrailerPopup(false);
+    };
+
+    // Xử lý focus cho pop-up
+    useEffect(() => {
+        if (showTrailerPopup && popupRef.current) {
+            popupRef.current.focus();
+        }
+    }, [showTrailerPopup]);
+
+    // Đóng pop-up khi nhấn phím Esc
+    useEffect(() => {
+        const handleKeyDown = (event) => {
+            if (event.key === "Escape" && showTrailerPopup) {
+                handleCloseTrailer();
+            }
+        };
+        document.addEventListener("keydown", handleKeyDown);
+        return () => document.removeEventListener("keydown", handleKeyDown);
+    }, [showTrailerPopup]);
+
     return (
         <div className="flex items-center justify-start !p-4 rounded-lg gap-4 flex-wrap !mt-4">
             <div className="flex items-center gap-4 flex-grow flex-wrap">
                 <a
                     href={watchUrl}
-                    className="flex items-center justify-center gap-2 text-base font-bold text-black bg-gradient-to-r from-[#ff3333] to-[#aa0000] !py-3 !px-6 rounded-full transition-all duration-300 hover:scale-105 hover:shadow-[0_0_15px_rgba(255,51,51,0.7),0_0_25px_rgba(255,51,51,0.5)] min-h-[3rem] !ml-3.5"
+                    className="flex items-center justify-center gap-2 text-base font-bold text-black bg-gradient-to-r from-[#ff3333] to-[#aa0000] !py-3 !px-6 rounded-full transition-all duration-300 hover:shadow-[0_0_15px_rgba(255,51,51,0.7),0_0_25px_rgba(255,51,51,0.5)] min-h-[3rem] !ml-3.5"
                 >
                     <i className="fa-solid fa-play text-black group-hover:text-white" />
                     <span>Xem Ngay</span>
                 </a>
+
+                {/* Nút trailer */}
+                <button
+                    onClick={handleOpenTrailer}
+                    disabled={!trailerUrl || trailerLoading}
+                    className={`flex items-center justify-center gap-2 cursor-pointer text-base font-bold text-black bg-gradient-to-r from-[#ff9900] to-[#a57f01bb] !py-3 !px-6 rounded-full transition-all duration-300 hover:shadow-[0_0_15px_rgba(255,153,0,0.7),0_0_25px_rgba(255,153,0,0.5)] min-h-[3rem] ${(!trailerUrl || trailerLoading) ? "opacity-50 cursor-not-allowed" : ""}`}
+                >
+                    {trailerLoading ? (
+                        <i className="fa-solid fa-spinner animate-spin text-black" />
+                    ) : (
+                        <i className="fa-solid fa-film text-black group-hover:text-white" />
+                    )}
+                    <span>Xem Trailer</span>
+                </button>
 
                 <div className="flex items-center gap-6 justify-start">
                     {/* Nút yêu thích */}
@@ -224,7 +305,54 @@ const MovieActions = ({ movieId, type }) => {
                 </div>
             </div>
 
-            {error && <div className="text-[#e50914] text-sm !mt-2">{error}</div>}
+            {(error || trailerError) && (
+                <div className="text-[#e50914] text-sm !mt-2">
+                    {error || trailerError}
+                </div>
+            )}
+
+            {/* Trailer Popup */}
+            {showTrailerPopup && (
+                <>
+                    {/* Overlay */}
+                    <div
+                        className="fixed inset-0 bg-black rounded-3xl bg-opacity-60 z-[9999]"
+                        onClick={handleCloseTrailer}
+                    />
+
+                    {/* Popup Window */}
+                    <div
+                        className="fixed z-[10000]  top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[98%] max-w-[900px] h-auto bg-black border border-gray-800 rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.5)]"
+                        role="dialog"
+                        aria-labelledby="trailer_popup_title"
+                        tabIndex={0}
+                        ref={popupRef}
+                    >
+                        {/* Title Bar */}
+                        <div className="flex justify-between items-center bg-gray-900 text-white !p-2 border-b border-gray-800">
+                            <span id="trailer_popup_title">Play Trailer</span>
+                            <button
+                                onClick={handleCloseTrailer}
+                                className="cursor-pointer bg-[#e50914] text-white rounded-full w-8 h-8 flex items-center justify-center z-10 hover:bg-[#b20710] transition-colors"
+                                aria-label="Đóng trailer"
+                            >
+                                <i className="fa-solid fa-times" />
+                            </button>
+                        </div>
+
+                        {/* Video Content */}
+                        <div className="relative w-full" style={{ paddingBottom: "66.25%" }}>
+                            <iframe
+                                className="absolute top-0 left-0 w-full h-full border-0"
+                                src={trailerUrl}
+                                title="Movie Trailer"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                            />
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     );
 };
