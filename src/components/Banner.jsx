@@ -1,33 +1,50 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom"; // Import useNavigate
+import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlay, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 import "../styles/Banner.css";
-import staticContent from "../service/staticData.jsx"; // Import dữ liệu tĩnh
+import { getAllMovies } from "../service/api"; // Import API service
 
 const Banner = () => {
     const [content, setContent] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
-    const navigate = useNavigate(); // Khởi tạo useNavigate
+    const [error, setError] = useState(null);
+    const navigate = useNavigate();
 
     useEffect(() => {
-        // Sử dụng dữ liệu tĩnh từ staticContent.js
-        const fetchStaticData = () => {
-            setIsLoading(true);
-            const contentWithDetails = staticContent.map((item) => ({
-                ...item,
-                type: item.media_type || (item.title ? "movie" : "tv"), // Xác định loại nội dung
-            }));
-
-            if (contentWithDetails.length > 0) {
+        const fetchMovies = async () => {
+            try {
+                setIsLoading(true);
+                const movies = await getAllMovies(); // Gọi API lấy danh sách phim
+                // Chuẩn hóa dữ liệu để phù hợp với component
+                const contentWithDetails = movies.map((movie) => ({
+                    id: movie.movieId,
+                    title: movie.title,
+                    backdrop_path: `${import.meta.env.VITE_CDN_URL}/uploads/backdrops/${movie.backdropUrl}`,
+                    poster_path: `${import.meta.env.VITE_CDN_URL}/uploads/images/${movie.imageUrl}`,
+                    video_path: `${import.meta.env.VITE_CDN_URL}/uploads/videos/${movie.videoUrl}`,
+                    overview: movie.overviewString,
+                    genres: movie.genres.split(",").map((g) => ({ name: g.trim() })), // Chuyển genres thành mảng
+                    vote_average: movie.rating,
+                    release_date: movie.releaseYear ? `${movie.releaseYear}-01-01` : null,
+                    runtime: movie.duration,
+                    type: "movie", // Giả sử tất cả là movie, có thể mở rộng cho TV Series
+                    certification: movie.status, // Dùng status làm certification
+                    movieCast: movie.movieCast ? Array.from(movie.movieCast) : [],
+                    director: movie.director,
+                    studio: movie.studio,
+                }));
                 setContent(contentWithDetails);
                 setCurrentIndex(0);
+            } catch (err) {
+                setError("Không thể tải danh sách phim");
+            } finally {
+                setIsLoading(false);
             }
-            setIsLoading(false);
         };
 
-        fetchStaticData();
+        fetchMovies();
     }, []);
 
     useEffect(() => {
@@ -44,11 +61,9 @@ const Banner = () => {
     const handlePlayClick = () => {
         const currentItem = content[currentIndex];
         if (currentItem && currentItem.id) {
-            // Điều hướng đến trang phát video, ví dụ: /watch/:id
             navigate(`/xem-phim/${currentItem.id}?type=${currentItem.type}`);
         } else {
             console.error("Không có dữ liệu để phát video");
-            // Có thể hiển thị thông báo lỗi nếu cần
         }
     };
 
@@ -56,11 +71,9 @@ const Banner = () => {
     const handleDetailsClick = () => {
         const currentItem = content[currentIndex];
         if (currentItem && currentItem.id) {
-            // Điều hướng đến trang chi tiết, ví dụ: /movie/:id hoặc /tv/:id
             navigate(`/phim/${currentItem.id}`);
         } else {
             console.error("Không có dữ liệu để xem chi tiết");
-            // Có thể hiển thị thông báo lỗi nếu cần
         }
     };
 
@@ -82,23 +95,26 @@ const Banner = () => {
         );
     }
 
-    if (content.length === 0) return <div>Loading...</div>;
+    if (error) {
+        return <div>{error}</div>;
+    }
+
+    if (content.length === 0) {
+        return <div>Không có phim nào để hiển thị</div>;
+    }
 
     const currentItem = content[currentIndex];
 
-    // Xử lý các thuộc tính khác nhau giữa movie và TV
-    const title = currentItem.title || currentItem.name;
-    const year = (currentItem.release_date || currentItem.first_air_date)?.split("-")[0];
-    const runtime =
-        currentItem.type === "movie"
-            ? currentItem.runtime
-            : currentItem.episode_run_time?.[0] || "N/A";
+    // Xử lý các thuộc tính
+    const title = currentItem.title;
+    const year = currentItem.release_date?.split("-")[0];
+    const runtime = currentItem.runtime ? `${currentItem.runtime} phút` : "N/A";
 
     return (
         <div
             className="banner"
             style={{
-                backgroundImage: `url(${currentItem.backdrop_path})`, // Sử dụng ảnh đã import
+                backgroundImage: `url(${currentItem.backdrop_path})`,
                 transition: "background-image 1s ease-in-out",
             }}
         >
@@ -107,11 +123,13 @@ const Banner = () => {
                 <h4>
                     <span>{year || "N/A"}</span>
                     <span>{currentItem.vote_average?.toFixed(1) || "N/A"}</span>
-                    <span>{runtime ? `${runtime} phút` : "N/A"}</span>
-                    <span>{currentItem.certification}</span>
+                    <span>{runtime}</span>
+                    <span>{currentItem.certification || "N/A"}</span>
                 </h4>
-                <p className="genres">{currentItem.genres?.map((g) => g.name).join(" • ")}</p>
-                <p className="overview">{currentItem.overview}</p>
+                <p className="genres">
+                    {currentItem.genres?.map((g) => g.name).join(" • ") || "N/A"}
+                </p>
+                <p className="overview">{currentItem.overview || "Không có mô tả"}</p>
                 <div className="button-group">
                     <button className="btn play" onClick={handlePlayClick}>
                         <FontAwesomeIcon icon={faPlay} /> Xem ngay

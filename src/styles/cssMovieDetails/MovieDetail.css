@@ -6,6 +6,9 @@
     box-sizing: border-box;
 }
 
+:root {
+    --primary: #40d6db;
+}
 
 /* Phần nền của trang chi tiết phim */
 .top-detail-wrap {
