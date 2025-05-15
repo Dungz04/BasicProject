@@ -1,0 +1,399 @@
+/* Mãn nhãn phim chiếu rạp */
+.movie-section {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2vmin 3vmin;
+    background-color: #1a1a1a;
+    font-family: 'Lexend', sans-serif;
+}
+
+/* Tiêu đề danh mục */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    color: #ffffff;
+    border-left: 4px solid #e50914;
+    padding-left: 1rem;
+}
+
+.section-header h2 {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    margin: 0;
+    line-height: 1.2;
+}
+
+.section-header i {
+    cursor: pointer;
+    font-size: clamp(0.9rem, 1.5vw, 1rem);
+    color: white;
+}
+
+/* Swiper Container */
+.swiper {
+    width: 100%;
+    padding: 1rem 0;
+    /* Đảm bảo Swiper trượt mượt mà */
+    transition: all 0.3s ease;
+}
+
+/* Kích thước các phim */
+.movie {
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+    transition: transform 0.3s ease-in-out;
+    width: 100%;
+    height: 250px;
+    display: block;
+}
+
+/* Hiệu ứng hover chỉ áp dụng trên thiết bị có con trỏ */
+@media (hover: hover) and (pointer: fine) {
+    .movie:hover {
+        transform: scale(1.05);
+    }
+}
+
+/* Hiệu ứng nhấn trên thiết bị cảm ứng */
+.movie:active {
+    transform: scale(0.98);
+}
+
+/* Ảnh nền phim */
+.movie-bg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 10px;
+    display: block;
+    transition: opacity 0.3s ease; /* Hiệu ứng mượt mà khi trượt */
+}
+
+/* Overlay (nơi chứa ảnh nhỏ + thông tin) */
+.movie-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+    padding: 1rem;
+    transition: opacity 0.3s ease;
+}
+
+/* Ảnh nhỏ của phim */
+.movie-poster {
+    width: 80px;
+    height: 120px;
+    border-radius: 5px;
+    margin-right: 1rem;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.5);
+    transition: transform 0.3s ease;
+}
+
+/* Thông tin phim */
+.movie-info {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+/* Tiêu đề phim */
+.movie-info h3 {
+    font-size: clamp(1rem, 2vw, 1.125rem);
+    margin: 0.5rem 0;
+    font-weight: bold;
+    color: #ffffff;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Thông tin năm và thời lượng */
+.movie-info p {
+    font-size: clamp(0.75rem, 1.5vw, 0.875rem);
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0.25rem 0;
+}
+
+.details-tt{
+    background-color: transparent;
+    border: 1px solid #e50914;
+    border-radius: 0.33rem;
+    color: #fff;
+    font-weight: 500;
+    cursor: default;
+    line-height: 1.5rem;
+    font-size: 0.75rem;
+    padding: 0 0.4rem;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    width: 80px;
+    gap: 5px;
+}
+
+.text-green-500 {
+    color: #22c55e;
+}
+
+.text-yellow-500 {
+    color: #eab308;
+}
+
+/* Tùy chỉnh Swiper */
+.swiper-button-prev,
+.swiper-button-next {
+    color: #e50914 !important;
+    width: 40px;
+    height: 40px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: opacity 0.3s ease;
+}
+
+.swiper-button-prev::after,
+.swiper-button-next::after {
+    font-size: 1rem !important;
+}
+
+.swiper-pagination {
+    position: relative;
+    margin-top: 1rem;
+}
+
+.swiper-pagination-bullet {
+    background: white !important;
+    width: 10px;
+    height: 10px;
+    transition: background 0.3s ease;
+}
+
+.swiper-pagination-bullet-active {
+    background: #e50914 !important;
+}
+
+/* Thông báo không có phim */
+.no-movies {
+    text-align: center;
+    color: #ffffff;
+    font-size: 1rem;
+    padding: 2rem;
+    background-color: #2a2a2a;
+    border-radius: 10px;
+}
+
+/* Skeleton loading */
+.skeleton {
+    background-color: #2a2a2a;
+    animation: skeleton-loading 1s linear infinite alternate;
+}
+
+.skeleton-bg {
+    width: 100%;
+    height: 100%;
+    border-radius: 10px;
+}
+
+.skeleton-poster {
+    width: 80px;
+    height: 120px;
+    border-radius: 5px;
+    margin-right: 1rem;
+}
+
+.skeleton-title {
+    width: 80%;
+    height: 1.2rem;
+    margin: 0.5rem 0;
+}
+
+.skeleton-text {
+    width: 60%;
+    height: 0.9rem;
+    margin: 0.25rem 0;
+}
+
+@keyframes skeleton-loading {
+    0% {
+        background-color: #2a2a2a;
+    }
+    100% {
+        background-color: #3a3a3a;
+    }
+}
+
+/* Responsive */
+@media (max-width: 1280px) {
+    .movie-section {
+        padding: 2vmin;
+    }
+
+    .movie {
+        height: 230px;
+    }
+
+    .movie-poster {
+        width: 75px;
+        height: 115px;
+    }
+}
+
+@media (max-width: 1024px) {
+    .movie {
+        height: 220px;
+    }
+
+    .movie-poster {
+        width: 70px;
+        height: 110px;
+    }
+
+    .movie-info h3 {
+        font-size: clamp(0.9rem, 1.8vw, 1rem);
+    }
+
+    .movie-info p {
+        font-size: clamp(0.7rem, 1.3vw, 0.8rem);
+    }
+
+    .swiper-button-prev,
+    .swiper-button-next {
+        width: 35px;
+        height: 35px;
+    }
+}
+
+@media (max-width: 768px) {
+    .movie-section h2 {
+        font-size: 1.5rem;
+    }
+
+    .movie {
+        height: 200px;
+    }
+
+    .movie-poster {
+        width: 60px;
+        height: 100px;
+    }
+
+    .movie-overlay {
+        padding: 0.75rem;
+    }
+
+    .swiper-button-prev,
+    .swiper-button-next {
+        width: 30px;
+        height: 30px;
+    }
+
+    .swiper-button-prev::after,
+    .swiper-button-next::after {
+        font-size: 0.8rem !important;
+    }
+
+    .swiper-pagination-bullet {
+        width: 8px;
+        height: 8px;
+    }
+
+    .skeleton-poster {
+        width: 60px;
+        height: 100px;
+    }
+}
+
+@media (max-width: 480px) {
+    .movie-section {
+        padding: 1vmin;
+    }
+
+    .movie-section h2 {
+        font-size: 1.25rem;
+        margin-bottom: 1rem;
+    }
+
+    .movie {
+        height: 180px;
+    }
+
+    .movie-poster {
+        width: 50px;
+        height: 90px;
+    }
+
+    .movie-info h3 {
+        font-size: 0.85rem;
+    }
+
+    .movie-info p {
+        font-size: 0.7rem;
+    }
+
+    .swiper-button-prev,
+    .swiper-button-next {
+        display: none;
+    }
+
+    .skeleton-poster {
+        width: 50px;
+        height: 90px;
+    }
+}
+
+@media (max-width: 320px) {
+    .movie {
+        height: 160px;
+    }
+
+    .movie-poster {
+        width: 45px;
+        height: 80px;
+    }
+
+    .movie-info h3 {
+        font-size: 0.8rem;
+    }
+
+    .movie-info p {
+        font-size: 0.65rem;
+    }
+
+    .movie-overlay {
+        padding: 0.5rem;
+    }
+}
+
+@media (min-width: 1600px) {
+    .movie-section {
+        max-width: 1600px;
+    }
+
+    .movie {
+        height: 280px;
+    }
+
+    .movie-poster {
+        width: 90px;
+        height: 130px;
+    }
+
+    .movie-info h3 {
+        font-size: 1.25rem;
+    }
+
+    .movie-info p {
+        font-size: 1rem;
+    }
+}

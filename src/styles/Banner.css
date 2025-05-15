@@ -1,0 +1,270 @@
+/* 🌟 Phần banner chính */
+.banner {
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+    padding: 0 100px;
+    display: flex;
+    justify-content: flex-start; /* Đổi để nội dung căn trái */
+    align-items: center;
+    background-size: cover;
+    background-position: center;
+    overflow: hidden;
+    transition: background-image 0.5s ease-in-out;
+}
+
+/* 🔥 Hiệu ứng overlay làm mờ nền */
+.banner::before {
+    position: absolute;
+    content: '';
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1;
+}
+
+/* 📌 Nội dung chính của banner */
+.banner-content {
+    position: relative;
+    max-width: 600px;
+    text-align: left; /* Căn trái cho nội dung */
+    color: white;
+    z-index: 2;
+}
+
+/* 🎬 Tiêu đề phim */
+.banner-content h1 {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+}
+
+/* 🏆 Thông tin chính (Năm, điểm số, độ tuổi, thời lượng) */
+.banner-content h4 {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 10px;
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 400;
+    font-size: 1.2rem;
+}
+
+.banner-content h4 span {
+    padding: 5px 15px;
+    border-right: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.banner-content h4 span:last-child {
+    border-right: none;
+}
+
+.banner-content h4 span:nth-child(2) {
+    color: #e50914;
+}
+
+.banner-content h4 span:nth-child(4) {
+    background-color: #e50914;
+    color: white;
+    padding: 2px 5px;
+    border-radius: 3px;
+    margin-left: 5px;
+}
+
+/* 🎭 Thể loại phim */
+.genres {
+    font-size: 1.1rem;
+    font-style: italic;
+    font-weight: 400;
+    opacity: 0.9;
+    margin-bottom: 15px;
+    text-align: left;
+}
+
+/* 📜 Mô tả phim */
+.banner-content .overview {
+    font-size: 1rem;
+    font-weight: 300;
+    line-height: 1.6em;
+    margin: 15px 0;
+    text-align: justify;
+}
+
+/* 🔘 Nhóm nút bấm */
+.button-group {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    margin-top: 15px;
+}
+
+/* 🔴 Nút bấm chính */
+.btn {
+    padding: 12px 25px;
+    font-size: 1rem;
+    font-weight: 500;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border: none;
+    cursor: pointer;
+    transition: 0.3s;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.btn.play {
+    background: #e50914;
+    color: white;
+}
+
+.btn.play:hover {
+    background: white;
+    color: #e50914;
+}
+
+.btn.list {
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.btn.list:hover {
+    background: #e50914;
+    border-color: white;
+}
+
+/* Skeleton UI */
+.skeleton-banner {
+    background: #333; /* Màu nền tối khi đang tải */
+}
+
+.skeleton {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    animation: skeleton-loading 1.5s infinite ease-in-out;
+}
+
+.skeleton-title {
+    width: 70%;
+    height: 40px;
+    margin-bottom: 10px;
+}
+
+.skeleton-info {
+    width: 50%;
+    height: 20px;
+    margin-bottom: 15px;
+}
+
+.skeleton-genres {
+    width: 40%;
+    height: 15px;
+    margin-bottom: 15px;
+}
+
+.skeleton-overview {
+    width: 100%;
+    height: 60px;
+    margin-bottom: 20px;
+}
+
+.skeleton-button {
+    width: 120px;
+    height: 40px;
+}
+
+@keyframes skeleton-loading {
+    0% {
+        opacity: 0.6;
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0.6;
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) { /* Tablet */
+    .banner {
+        padding: 0 50px;
+        min-height: 80vh;
+    }
+
+    .banner-content h1 {
+        font-size: 2rem;
+    }
+
+    .banner-content h4 {
+        font-size: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .banner-content h4 span {
+        padding: 5px 10px;
+    }
+
+    .genres {
+        font-size: 1rem;
+    }
+
+    .banner-content .overview {
+        font-size: 0.9rem;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 480px) { /* Mobile */
+    .banner {
+        padding: 0 20px;
+        min-height: 60vh;
+        justify-content: center;
+    }
+
+    .banner-content {
+        max-width: 100%;
+        text-align: center;
+    }
+
+    .banner-content h1 {
+        font-size: 1.5rem;
+    }
+
+    .banner-content h4 {
+        font-size: 0.9rem;
+        justify-content: center;
+        gap: 5px;
+    }
+
+    .banner-content h4 span {
+        padding: 3px 8px;
+    }
+
+    .genres {
+        font-size: 0.9rem;
+        text-align: center;
+    }
+
+    .banner-content .overview {
+        font-size: 0.8rem;
+    }
+
+    .button-group {
+        justify-content: center;
+    }
+
+    .btn {
+        padding: 8px 15px;
+        font-size: 0.8rem;
+    }
+}
