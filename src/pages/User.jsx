@@ -14,6 +14,7 @@ const User = () => {
     const [currentUser, setCurrentUser] = useState(null);
     const [favorites, setFavorites] = useState([]);
     const [playlists, setPlaylists] = useState([]);
+    const [history, setHistory] = useState([]);
     const [movieDetails, setMovieDetails] = useState({});
     const [error, setError] = useState(null);
     const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -83,6 +84,38 @@ const User = () => {
                     }
                 });
 
+                const getHistory = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/history/${response.data.userId}`, {
+                    headers: {
+                        Authorization: `Bearer ${authApi.getAccessToken()}`
+                    }
+                });
+
+                // Lấy thông tin phim cho mỗi video trong history
+                const historyWithDetails = await Promise.all(
+                    getHistory.data.map(async (item) => {
+                        try {
+                            const contentDetails = await cdnApi.getContentDetails(item.videoId);
+                            return {
+                                ...item,
+                                movieDetails: {
+                                    title: contentDetails.title,
+                                    poster: `${import.meta.env.VITE_API_BASE_URL}/assets/get_assets_web?linkAssets=${contentDetails.imageUrl}&nameTag=poster`,
+                                    year: contentDetails.releaseYear,
+                                    type: "movie"
+                                }
+                            };
+                        } catch (error) {
+                            console.error(`Error fetching details for video ${item.videoId}:`, error);
+                            return {
+                                ...item,
+                                movieDetails: null
+                            };
+                        }
+                    })
+                );
+
+                console.log("GET HISTORY WITH DETAILS", historyWithDetails);
+
                 console.log("GET FAVORITES", getFavorites.data);
 
                 const userData = response.data;
@@ -97,6 +130,8 @@ const User = () => {
                 setFavorites(getFavorites.data || []);
 
                 setPlaylists(userData.playlists || []);
+
+                setHistory(historyWithDetails || []);
 
                 setError(null);
 
@@ -704,9 +739,48 @@ const User = () => {
                                 <p className="text-gray-600">Danh sách phim bạn đang xem dở</p>
                             </div>
                             <div className="!p-6">
-                                <p className="text-gray-600 text-center">
-                                    Chưa có phim nào trong danh sách xem tiếp.
-                                </p>
+                                {history.length === 0 && !loading && (
+                                    <p className="text-gray-600 text-center">
+                                        Chưa có phim nào trong danh sách xem tiếp.
+                                    </p>
+                                )}
+                                {history.length > 0 && (
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                                        {history.map((item) => (
+                                            <div key={item.id} className="group relative flex flex-col items-center">
+                                                {item.movieDetails ? (
+                                                    <>
+                                                        <a
+                                                            href={`/xem-phim/${item.videoId}?position=${item.position}`}
+                                                            className="w-full h-60 relative"
+                                                        >
+                                                            <img
+                                                                src={item.movieDetails.poster}
+                                                                alt={item.movieDetails.title}
+                                                                className="w-full h-full object-cover rounded-md transition-all duration-300 group-hover:shadow-xl"
+                                                            />
+                                                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md flex items-center justify-center">
+                                                                <span className="text-white text-sm font-medium">
+                                                                    Tiếp tục xem
+                                                                </span>
+                                                            </div>
+                                                        </a>
+                                                        <div className="mt-3 text-center">
+                                                            <h3 className="text-sm font-semibold text-gray-800 truncate">
+                                                                {item.movieDetails.title}
+                                                            </h3>
+                                                            <p className="text-xs text-gray-500 mt-1">
+                                                                Tiến độ: {item.progress.toFixed(2)}%
+                                                            </p>
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <p>Không tìm thấy thông tin phim</p>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}

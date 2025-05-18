@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import tmdbApi from "../service/tmdbApi.jsx";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -21,13 +21,19 @@ const WatchPage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [videoError, setVideoError] = useState(null);
+    const [isVideoReady, setIsVideoReady] = useState(false); // Trạng thái mới cho video
     const [isSeasonDropdownOpen, setIsSeasonDropdownOpen] = useState(false);
     const [ageRating, setAgeRating] = useState("");
     const [recommendations, setRecommendations] = useState([]);
 
+    const position = queryParams.get("position");
+
     const version = { id: 1, type: "pd", label: "Phụ đề", bgColor: "bg-[#5e6070]" };
 
     const videoRef = useRef(null);
+
+    // Memoize contentJk để ổn định dependencies
+    const stableContentJk = useMemo(() => contentJk, [contentJk?.urlPlayer]);
 
     useEffect(() => {
         const fetchContentData = async () => {
@@ -41,6 +47,7 @@ const WatchPage = () => {
                 setLoading(true);
                 setError(null);
                 setVideoError(null);
+                setIsVideoReady(false); // Reset trạng thái video
 
                 let contentType = type;
                 let contentDetails;
@@ -55,31 +62,27 @@ const WatchPage = () => {
                     contentType = fallbackType;
                 }
 
-                if (!contentDetailsJk) throw new Error("Không tìm thấy nội dung");
+                if (!contentDetailsJk) {
+                    throw new Error("Không tìm thấy nội dung");
+                }
 
                 const credits = await tmdbApi.getContentCredits(movieId, contentType);
 
-                // if (!contentDetailsJk.videoUrl) {
-                //     throw new Error("Không tìm thấy video");
-                // }
-
                 const videoUrl = await cdnApi.getAssets(contentDetailsJk.videoUrl, "video");
+                if (!videoUrl?.url) {
+                    throw new Error("Không tìm thấy URL video hợp lệ");
+                }
 
                 const castList = await cdnApi.getCastList(contentDetailsJk.title);
-
-                // console.log("CAST LIST:", castList.data.castData);
-
-                // console.log("CAST LIST:", castList.data.castName);
-
 
                 console.log("VIDEO URL:", videoUrl.url);
 
                 setContentJk({ ...contentDetailsJk, castList, urlPlayer: videoUrl.url });
+                setIsVideoReady(true); // Đánh dấu video sẵn sàng
 
                 setContent({ ...contentDetails, credits, type: contentType });
 
                 const rating = contentDetailsJk.rating;
-
                 setAgeRating(rating);
 
                 const recs = await tmdbApi.getContentRecommendations(movieId, contentType);
@@ -125,71 +128,97 @@ const WatchPage = () => {
         let hls = null;
 
         const initVideo = () => {
-            if (!videoError && contentJk?.urlPlayer) {
-                const videoUrl = contentJk.urlPlayer;
-                console.log("UL PL:", videoUrl);
+            if (!videoRef.current) {
+                console.warn('videoRef.current is null, retrying...');
+                const timeout = setTimeout(initVideo, 100); // Thử lại sau 100ms
+                return () => clearTimeout(timeout);
+            }
 
-                if (Hls.isSupported()) {
-                    hls = new Hls({
-                        debug: false,
-                        enableWorker: true,
-                        lowLatencyMode: true,
-                    });
+            if (!stableContentJk?.urlPlayer || !isVideoReady) {
+                console.warn('Skipping video init: contentJk.urlPlayer or isVideoReady not ready');
+                return;
+            }
 
-                    hls.loadSource(videoUrl);
-                    hls.attachMedia(videoRef.current);
-                    hls.on(Hls.Events.ERROR, function (event, data) {
-                        console.error('HLS error:', data);
-                        if (data.fatal) {
-                            handleVideoError(new Error('Lỗi tải HLS: ' + data.type));
-                            if (hls) {
-                                hls.destroy();
-                                hls = null;
-                            }
+            const videoUrl = stableContentJk.urlPlayer;
+            console.log('Initializing video with URL:', videoUrl);
+
+            if (Hls.isSupported()) {
+                if (hls) {
+                    console.warn('HLS instance already exists, destroying previous instance');
+                    hls.destroy();
+                }
+
+                hls = new Hls({
+                    debug: false,
+                    enableWorker: true,
+                    lowLatencyMode: true,
+                });
+
+                hls.loadSource(videoUrl);
+                hls.attachMedia(videoRef.current);
+
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    if (position) {
+                        videoRef.current.currentTime = Number(position);
+                    }
+                    videoRef.current.play().catch(error => {
+                        console.warn('HLS auto-play failed:', error);
+                        if (error.name !== 'NotAllowedError') {
+                            setVideoError('Không thể tự động phát video HLS');
                         }
                     });
-                } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
-                    videoRef.current.src = videoUrl;
-                    const playHandler = () => {
-                        videoRef.current?.play().catch(error => {
-                            console.error('Auto-play failed:', error);
-                            handleVideoError(new Error('Không thể tự động phát video'));
-                        });
-                    };
-                    videoRef.current.addEventListener('loadedmetadata', playHandler);
+                });
 
-                    // Store the handler for cleanup
-                    videoRef.current.playHandler = playHandler;
-                } else {
-                    handleVideoError(new Error('Trình duyệt không hỗ trợ HLS'));
-                }
+                hls.on(Hls.Events.ERROR, (event, data) => {
+                    console.error('HLS error:', data);
+                    if (data.fatal) {
+                        setVideoError(`Lỗi tải HLS: ${data.type}`);
+                        if (hls) {
+                            hls.destroy();
+                            hls = null;
+                        }
+                    }
+                });
+            } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
+                videoRef.current.src = videoUrl;
+                const playHandler = () => {
+                    videoRef.current?.play().catch(error => {
+                        console.warn('Native HLS auto-play failed:', error);
+                        if (error.name !== 'NotAllowedError') {
+                            setVideoError('Không thể tự động phát video');
+                        }
+                    });
+                };
+                videoRef.current.addEventListener('loadedmetadata', playHandler);
+                videoRef.current.playHandler = playHandler;
+            } else {
+                setVideoError('Trình duyệt không hỗ trợ HLS');
             }
         };
 
         initVideo();
 
-        // Cleanup function
         return () => {
             if (hls) {
+                console.log('Destroying HLS instance');
                 hls.destroy();
                 hls = null;
             }
-
             if (videoRef.current) {
+                console.log('Cleaning up video element');
                 videoRef.current.pause();
                 videoRef.current.removeAttribute('src');
                 videoRef.current.load();
-
-                // Remove stored event listener if it exists
                 if (videoRef.current.playHandler) {
                     videoRef.current.removeEventListener('loadedmetadata', videoRef.current.playHandler);
                     delete videoRef.current.playHandler;
                 }
             }
         };
-    }, [videoRef, contentJk, currentEpisode, videoError]);
+    }, [stableContentJk?.urlPlayer, currentEpisode, isVideoReady]);
 
     const handleEpisodeChange = (episodeNumber) => {
+        setVideoError(null); // Reset videoError khi chuyển tập
         const selectedEpisode = episodes.find((ep) => ep.episode_number === episodeNumber);
         if (selectedEpisode) {
             setCurrentEpisode(selectedEpisode);
@@ -198,6 +227,7 @@ const WatchPage = () => {
     };
 
     const handleSeasonChange = (seasonNumber) => {
+        setVideoError(null); // Reset videoError khi chuyển mùa
         setCurrentSeason(seasonNumber);
         setIsSeasonDropdownOpen(false);
         navigate(`/xem-phim/${movieId}/season/${seasonNumber}/episode/1?type=tv`);
@@ -208,46 +238,9 @@ const WatchPage = () => {
         return `${minutes} phút`;
     };
 
-    const getAgeRating = async (content, type, id) => {
-        try {
-            if (content?.adult) return "Adult";
-
-            if (type === "tv") {
-                let usRating = content?.content_ratings?.results?.find((r) => r.iso_3166_1 === "US");
-                if (!usRating) {
-                    const contentRatings = await tmdbApi.getContentReleaseInfo(id, type);
-                    // Xử lý cấu trúc dữ liệu linh hoạt
-                    const results = contentRatings?.results || contentRatings || [];
-                    usRating = Array.isArray(results)
-                        ? results.find((r) => r.iso_3166_1 === "US")
-                        : null;
-                }
-                return usRating?.rating || "";
-            }
-
-            const releaseInfo = await tmdbApi.getContentReleaseInfo(id, type);
-            const usRelease = releaseInfo.find((r) => r.iso_3166_1 === "US");
-            if (usRelease?.release_dates?.length > 0) {
-                const certification = usRelease.release_dates.find((d) => d.certification)?.certification;
-                return certification || "";
-            }
-
-            return "";
-        } catch (error) {
-            console.error(`❌ Error fetching age rating for ${type} ${id}:`, error.message);
-            return "";
-        }
-    };
-
-    const handleVideoError = (e) => {
-        console.error('Lỗi video:', e);
-        const videoUrl = contentJk && contentJk.trailerUrl
-            ? `${import.meta.env.VITE_CDN_URL}/api/get_assets?linkTrailer=${contentJk.trailerUrl}/master.m3u8&nameTag=trailer`
-            : type === "tv" && currentEpisode
-                ? `${import.meta.env.VITE_CDN_URL}/api/get_assets?linkVideo=${contentJk.videoUrl}/${currentEpisode.episode_number}/master.m3u8&nameTag=video`
-                : `${import.meta.env.VITE_CDN_URL}/api/get_assets?linkVideo=${contentJk.videoUrl}/master.m3u8&nameTag=video`;
-
-        setVideoError(`Không thể tải video. URL: ${videoUrl}`);
+    const handleVideoError = (error) => {
+        console.error('Lỗi video:', error);
+        setVideoError(error.message);
     };
 
     if (loading) {
@@ -295,13 +288,13 @@ const WatchPage = () => {
         );
     }
 
-    const title = contentJk.title || contentJk.name;
-    const runtime = contentJk.duration;
-    const year = contentJk.releaseYear;
+    const title = contentJk?.title || contentJk?.name;
+    const runtime = contentJk?.duration;
+    const year = contentJk?.releaseYear;
 
-    const genreList = typeof contentJk.genres === 'string'
+    const genreList = typeof contentJk?.genres === 'string'
         ? contentJk.genres.split(',').map(genre => ({ name: genre.trim() }))
-        : Array.isArray(contentJk.genres)
+        : Array.isArray(contentJk?.genres)
             ? contentJk.genres
             : [];
 
@@ -313,8 +306,6 @@ const WatchPage = () => {
                 : [])
         : [];
 
-    console.log("CAST LIST NAME:", castListName);
-
     const castListData = contentJk?.castList?.data?.castData
         ? (typeof contentJk.castList.data.castData === 'string'
             ? contentJk.castList.data.castData.split(',').map(item => item.trim())
@@ -322,8 +313,6 @@ const WatchPage = () => {
                 ? contentJk.castList.data.castData
                 : [])
         : [];
-
-    console.log("CAST LIST DATA:", castListData);
 
     return (
         <div className="lg:px-4 px-2 bg-[#0f0f0f] min-h-screen text-white">
@@ -350,13 +339,17 @@ const WatchPage = () => {
                         <div className="w-full h-full flex justify-center items-center bg-black text-red-500">
                             <p>{videoError}</p>
                         </div>
-                    ) : (
+                    ) : isVideoReady ? (
                         <video
                             ref={videoRef}
                             controls
                             className="w-full h-full"
                             autoPlay
                         />
+                    ) : (
+                        <div className="w-full h-full flex justify-center items-center bg-black">
+                            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#e50914]"></div>
+                        </div>
                     )}
                 </div>
             </div>
