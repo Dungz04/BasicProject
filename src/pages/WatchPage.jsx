@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import tmdbApi from "../service/tmdbApi.jsx";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlay, faAngleLeft, faCaretDown } from "@fortawesome/free-solid-svg-icons";
+import { faPlay, faAngleLeft, faCaretDown, faCog, faPause } from "@fortawesome/free-solid-svg-icons";
 import cdnApi from "../service/cdnApi.jsx";
 import Hls from 'hls.js';
 
@@ -24,15 +24,21 @@ const WatchPage = () => {
     const [isVideoReady, setIsVideoReady] = useState(false); // Trạng thái mới cho video
     const [isSeasonDropdownOpen, setIsSeasonDropdownOpen] = useState(false);
     const [ageRating, setAgeRating] = useState("");
-    const [recommendations, setRecommendations] = useState([]);
+    const [recommendations, setRecommendations] = useState(() => []);
+    const [qualityLevels, setQualityLevels] = useState(() => []);
+    const [selectedQuality, setSelectedQuality] = useState(-1); // -1 for auto
+    const [isQualityMenuOpen, setIsQualityMenuOpen] = useState(false);
+    const [isVideoHovered, setIsVideoHovered] = useState(false); // For controlling button visibility
+    const [isVideoPlaying, setIsVideoPlaying] = useState(false); // Track play/pause state
 
     const position = queryParams.get("position");
 
     const version = { id: 1, type: "pd", label: "Phụ đề", bgColor: "bg-[#5e6070]" };
 
     const videoRef = useRef(null);
+    const hlsRef = useRef(null); 
+    const hideControlsTimeoutRef = useRef(null); 
 
-    // Memoize contentJk để ổn định dependencies
     const stableContentJk = useMemo(() => contentJk, [contentJk?.urlPlayer]);
 
     useEffect(() => {
@@ -78,6 +84,7 @@ const WatchPage = () => {
                 console.log("VIDEO URL:", videoUrl.url);
 
                 setContentJk({ ...contentDetailsJk, castList, urlPlayer: videoUrl.url });
+                
                 setIsVideoReady(true); // Đánh dấu video sẵn sàng
 
                 setContent({ ...contentDetails, credits, type: contentType });
@@ -125,7 +132,7 @@ const WatchPage = () => {
     }, [movieId, type, currentSeason, episode]);
 
     useEffect(() => {
-        let hls = null;
+        let hls = hlsRef.current; // Use hlsRef.current
 
         const initVideo = () => {
             if (!videoRef.current) {
@@ -153,29 +160,37 @@ const WatchPage = () => {
                     enableWorker: true,
                     lowLatencyMode: true,
                 });
+                hlsRef.current = hls; // Store HLS instance in ref
 
                 hls.loadSource(videoUrl);
                 hls.attachMedia(videoRef.current);
 
-                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
+                    console.log('HLS manifest parsed', data.levels);
+                    setQualityLevels(data.levels.map((level, index) => ({
+                        height: level.height,
+                        bitrate: level.bitrate,
+                        index: index
+                    })));
+                    setSelectedQuality(hls.currentLevel); // Set initial quality (often auto, which is -1)
+
                     if (position) {
                         videoRef.current.currentTime = Number(position);
                     }
-                    videoRef.current.play().catch(error => {
-                        console.warn('HLS auto-play failed:', error);
-                        if (error.name !== 'NotAllowedError') {
-                            setVideoError('Không thể tự động phát video HLS');
-                        }
-                    });
+                });
+
+                hls.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
+                    setSelectedQuality(data.level);
+                    console.log(`HLS quality switched to level index: ${data.level}`);
                 });
 
                 hls.on(Hls.Events.ERROR, (event, data) => {
                     console.error('HLS error:', data);
                     if (data.fatal) {
                         setVideoError(`Lỗi tải HLS: ${data.type}`);
-                        if (hls) {
-                            hls.destroy();
-                            hls = null;
+                        if (hlsRef.current) { // Use hlsRef.current
+                            hlsRef.current.destroy();
+                            hlsRef.current = null;
                         }
                     }
                 });
@@ -199,30 +214,74 @@ const WatchPage = () => {
         initVideo();
 
         return () => {
-            if (hls) {
-                console.log('Destroying HLS instance');
-                hls.destroy();
-                hls = null;
+            if (hlsRef.current) { // Use hlsRef.current
+                console.log('Destroying HLS instance on cleanup');
+                hlsRef.current.destroy();
+                hlsRef.current = null;
             }
-            if (videoRef.current) {
-                console.log('Cleaning up video element');
-                videoRef.current.pause();
-                videoRef.current.removeAttribute('src');
-                videoRef.current.load();
-                if (videoRef.current.playHandler) {
-                    videoRef.current.removeEventListener('loadedmetadata', videoRef.current.playHandler);
-                    delete videoRef.current.playHandler;
-                }
+            if (videoRef.current && videoRef.current.playHandler) {
+                videoRef.current.removeEventListener('loadedmetadata', videoRef.current.playHandler);
             }
         };
-    }, [stableContentJk?.urlPlayer, currentEpisode, isVideoReady]);
+    }, [stableContentJk, isVideoReady, position]);
 
-    const handleEpisodeChange = (episodeNumber) => {
+    useEffect(() => {
+        const videoElement = videoRef.current;
+        if (videoElement) {
+            const handlePlay = () => setIsVideoPlaying(true);
+            const handlePause = () => setIsVideoPlaying(false);
+
+            videoElement.addEventListener('play', handlePlay);
+            videoElement.addEventListener('pause', handlePause);
+
+            // Set initial state based on video's current paused state
+            setIsVideoPlaying(!videoElement.paused);
+
+            return () => {
+                videoElement.removeEventListener('play', handlePlay);
+                videoElement.removeEventListener('pause', handlePause);
+            };
+        }
+    }, [videoRef.current]); // Rerun if videoRef.current changes (e.g. on initial mount)
+
+    useEffect(() => {
+        return () => {
+            if (hideControlsTimeoutRef.current) {
+                clearTimeout(hideControlsTimeoutRef.current);
+            }
+        };
+    }, []);
+
+    const handleQualityChange = (qualityIndex) => {
+        if (hlsRef.current) {
+            hlsRef.current.currentLevel = qualityIndex;
+            // setSelectedQuality will be updated by LEVEL_SWITCHED event, or we can set it here too for immediate UI feedback
+            // setSelectedQuality(qualityIndex); 
+            console.log(`Attempting to change HLS quality to: ${qualityIndex === -1 ? 'Auto' : qualityLevels.find(q => q.index === qualityIndex)?.height + 'p'}`);
+        }
+        setIsQualityMenuOpen(false); // Close menu after selection
+    };
+
+    const handleMouseEnterVideo = () => {
+        if (hideControlsTimeoutRef.current) {
+            clearTimeout(hideControlsTimeoutRef.current);
+            hideControlsTimeoutRef.current = null;
+        }
+        setIsVideoHovered(true);
+    };
+
+    const handleMouseLeaveVideo = () => {
+        hideControlsTimeoutRef.current = setTimeout(() => {
+            setIsVideoHovered(false);
+        }, 500); // 500ms delay before hiding
+    };
+
+    const handleEpisodeClick = (ep) => {
         setVideoError(null); // Reset videoError khi chuyển tập
-        const selectedEpisode = episodes.find((ep) => ep.episode_number === episodeNumber);
+        const selectedEpisode = episodes.find((ep) => ep.episode_number === ep.episode_number);
         if (selectedEpisode) {
             setCurrentEpisode(selectedEpisode);
-            navigate(`/xem-phim/${movieId}/season/${currentSeason}/episode/${episodeNumber}?type=tv`);
+            navigate(`/xem-phim/${movieId}/season/${currentSeason}/episode/${ep.episode_number}?type=tv`);
         }
     };
 
@@ -340,12 +399,48 @@ const WatchPage = () => {
                             <p>{videoError}</p>
                         </div>
                     ) : isVideoReady ? (
-                        <video
-                            ref={videoRef}
-                            controls
-                            className="w-full h-full"
-                            autoPlay
-                        />
+                        <div 
+                            className="relative w-full h-full" 
+                            onMouseEnter={handleMouseEnterVideo}
+                            onMouseLeave={handleMouseLeaveVideo}
+                        >
+                            <video ref={videoRef} className="w-full h-full object-contain" controls={true} />
+
+                            {/* Custom Settings Button Overlay */}
+                            {qualityLevels.length > 0 && (isVideoHovered || isQualityMenuOpen || !isVideoPlaying) && (
+                                <div className="absolute bottom-12 right-[100px] md:bottom-11 md:right-[220px] z-20">
+                                    <div className="relative inline-block">
+                                        <button
+                                            onClick={() => setIsQualityMenuOpen(!isQualityMenuOpen)}
+                                            className="text-white p-2 bg-black bg-opacity-60 rounded-full hover:bg-opacity-80 transition-opacity focus:outline-none"
+                                            title="Cài đặt chất lượng"
+                                        >
+                                            <FontAwesomeIcon icon={faCog} size="xl" /> {/* Increased size */}
+                                        </button>
+                                        {isQualityMenuOpen && (
+                                            <div className="absolute bottom-full right-0 mb-2 w-36 bg-black bg-opacity-80 p-2 rounded shadow-lg">
+                                                <div className="text-white text-sm mb-1 border-b border-gray-600 pb-1">Chất lượng</div>
+                                                <button
+                                                    onClick={() => handleQualityChange(-1)}
+                                                    className={`block w-full text-left px-2 py-1 text-xs rounded ${selectedQuality === -1 || hlsRef.current?.autoLevelEnabled ? 'bg-red-600' : 'hover:bg-gray-700'} text-white mb-1`}
+                                                >
+                                                    Tự động {selectedQuality === -1 || hlsRef.current?.autoLevelEnabled ? `(${qualityLevels.find(q => q.index === hlsRef.current?.currentLevel)?.height}p)` : ''}
+                                                </button>
+                                                {qualityLevels.map((level) => (
+                                                    <button
+                                                        key={level.index}
+                                                        onClick={() => handleQualityChange(level.index)}
+                                                        className={`block w-full text-left px-2 py-1 text-xs rounded ${selectedQuality === level.index && !hlsRef.current?.autoLevelEnabled ? 'bg-red-600' : 'hover:bg-gray-700'} text-white mb-0.5 last:mb-0`}
+                                                    >
+                                                        {level.height}p
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     ) : (
                         <div className="w-full h-full flex justify-center items-center bg-black">
                             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#e50914]"></div>
@@ -376,17 +471,17 @@ const WatchPage = () => {
                                     <div className="flex items-center gap-2 mt-3 flex-wrap">
                                         {content.vote_average && (
                                             <div className="border border-[#e50914] rounded-[5px] !px-2">
-                                                <span className="text-[12px] px-1 text-white">
+                                                <span className="text-xs bg-gray-800/50 !px-2 !py-1 rounded">
                                                     TMDb {contentJk.rating}
                                                 </span>
                                             </div>
                                         )}
                                         <div className="border rounded-[5px]">
-                                            <span className="text-[12px] !px-1 text-white">{year}</span>
+                                            <span className="text-xs !px-1 text-white">{year}</span>
                                         </div>
                                         {runtime && (
                                             <div className="border rounded-[5px]">
-                                                <span className="text-[12px] !px-1 text-white">
+                                                <span className="text-xs !px-1 text-white">
                                                     {formatRuntime(runtime)}
                                                 </span>
                                             </div>
@@ -508,7 +603,7 @@ const WatchPage = () => {
                                                 ? "bg-[#e50914]"
                                                 : "bg-[#282B3A]"
                                                 }`}
-                                            onClick={() => handleEpisodeChange(ep.episode_number)}
+                                            onClick={() => handleEpisodeClick(ep)}
                                         >
                                             <FontAwesomeIcon
                                                 icon={faPlay}
