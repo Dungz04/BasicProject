@@ -40,7 +40,7 @@ const TabsContent = ({ activeTab, setActiveTab, movie, actors, recommendations }
                 )}
                 {activeTab === "actors" && (
                     <div className="bg-neutral-900 rounded-lg shadow-lg text-white animate-[fadeIn_0.3s_ease-in-out_forwards]">
-                        <ActorsTab actors={actors} />
+                        <ActorsTab actors={actors} title={movie.title} />
                     </div>
                 )}
                 {activeTab === "recommendations" && (

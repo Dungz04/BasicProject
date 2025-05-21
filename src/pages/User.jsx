@@ -1,19 +1,20 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { FaHeart, FaPlus, FaClockRotateLeft, FaUser, FaRightFromBracket } from "react-icons/fa6";
-import { auth, db, retryOperation } from "../service/firebase";
-import { doc, onSnapshot, updateDoc, arrayRemove, setDoc, writeBatch } from "firebase/firestore";
-import { onAuthStateChanged, signOut, updateProfile } from "firebase/auth";
+import authApi from "../service/authApi";
 import tmdbApi from "../service/tmdbApi";
 import Navbar from "../components/Navbar";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { toast } from "react-toastify";
+import axios from "axios";
+import cdnApi from "../service/cdnApi";
 
 const User = () => {
     const [currentUser, setCurrentUser] = useState(null);
     const [favorites, setFavorites] = useState([]);
     const [playlists, setPlaylists] = useState([]);
+    const [history, setHistory] = useState([]);
     const [movieDetails, setMovieDetails] = useState({});
     const [error, setError] = useState(null);
     const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -59,95 +60,94 @@ const User = () => {
 
     // Theo dõi trạng thái xác thực và dữ liệu người dùng
     useEffect(() => {
-        const unsubscribeAuth = onAuthStateChanged(
-            auth,
-            (user) => {
-                if (user) {
-                    const userRef = doc(db, "users", user.uid);
-                    const unsubscribeSnapshot = onSnapshot(
-                        userRef,
-                        { includeMetadataChanges: false },
-                        (doc) => {
-                            if (doc.exists()) {
-                                const data = doc.data();
-                                setCurrentUser({
-                                    name: user.displayName || "Người dùng",
-                                    email: user.email,
-                                    avatar: user.photoURL || "https://via.placeholder.com/150",
-                                    gender: data.gender || "other",
-                                });
-                                setFavorites(data.favorites || []);
-                                setPlaylists(data.playlists || []);
-                                setError(null);
-                            } else {
-                                retryOperation(() =>
-                                    setDoc(userRef, { favorites: [], playlists: [], gender: "other" })
-                                )
-                                    .then(() => {
-                                        setCurrentUser({
-                                            name: user.displayName || "Người dùng",
-                                            email: user.email,
-                                            avatar: user.photoURL || "https://via.placeholder.com/150",
-                                            gender: "other",
-                                        });
-                                        setFavorites([]);
-                                        setPlaylists([]);
-                                        setError(null);
-                                    })
-                                    .catch((err) => {
-                                        console.error("Lỗi khởi tạo tài liệu người dùng:", {
-                                            message: err.message,
-                                            code: err.code,
-                                            stack: err.stack,
-                                        });
-                                        setError("Không thể khởi tạo dữ liệu người dùng.");
-                                        toast.error("Không thể khởi tạo dữ liệu người dùng.", {
-                                            toastId: "init-user-error",
-                                        });
-                                        console.log("Toast triggered: init-user-error");
-                                    });
-                            }
-                        },
-                        (err) => {
-                            console.error("Lỗi Firestore:", {
-                                message: err.message,
-                                code: err.code,
-                                stack: err.stack,
-                            });
-                            setError(
-                                err.code === "unavailable"
-                                    ? "Bạn đang ngoại tuyến."
-                                    : "Lỗi tải dữ liệu người dùng."
-                            );
-                            toast.error(
-                                err.code === "unavailable"
-                                    ? "Bạn đang ngoại tuyến."
-                                    : "Lỗi tải dữ liệu người dùng.",
-                                { toastId: "firestore-error" }
-                            );
-                            console.log("Toast triggered: firestore-error");
+        const fetchUserData = async () => {
+            try {
+                setLoading(true);
+                console.log("ACCESS TOKEN", authApi.getAccessToken());
+                console.log("AUTH API", authApi.isAuthenticated());
+                // Kiểm tra xem có token không
+                if (!authApi.isAuthenticated()) {
+                    navigate("/login");
+                    return;
+                }
+
+                // Lấy thông tin user từ API
+                const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/auth/me?token=${authApi.getRefreshToken()}`, {
+                    headers: {
+                        Authorization: `Bearer ${authApi.getAccessToken()}`
+                    }
+                });
+
+                const getFavorites = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/movies/get_favorite?email=${response.data.email}`, {
+                    headers: {
+                        Authorization: `Bearer ${authApi.getAccessToken()}`
+                    }
+                });
+
+                const getHistory = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/history/${response.data.userId}`, {
+                    headers: {
+                        Authorization: `Bearer ${authApi.getAccessToken()}`
+                    }
+                });
+
+                // Lấy thông tin phim cho mỗi video trong history
+                const historyWithDetails = await Promise.all(
+                    getHistory.data.map(async (item) => {
+                        try {
+                            const contentDetails = await cdnApi.getContentDetails(item.videoId);
+                            return {
+                                ...item,
+                                movieDetails: {
+                                    title: contentDetails.title,
+                                    poster: `${import.meta.env.VITE_API_BASE_URL}/assets/get_assets_web?linkAssets=${contentDetails.imageUrl}&nameTag=poster`,
+                                    year: contentDetails.releaseYear,
+                                    type: "movie"
+                                }
+                            };
+                        } catch (error) {
+                            console.error(`Error fetching details for video ${item.videoId}:`, error);
+                            return {
+                                ...item,
+                                movieDetails: null
+                            };
                         }
-                    );
-                    return () => unsubscribeSnapshot();
-                } else {
-                    setCurrentUser(null);
-                    setFavorites([]);
-                    setPlaylists([]);
+                    })
+                );
+
+                console.log("GET HISTORY WITH DETAILS", historyWithDetails);
+
+                console.log("GET FAVORITES", getFavorites.data);
+
+                const userData = response.data;
+
+                setCurrentUser({
+                    name: userData.name || "Người dùng",
+                    email: userData.email,
+                    avatar: userData.avatar || "https://i.pinimg.com/564x/3d/8d/fa/3d8dfa87bf005410242861ea0a8c0c95.jpg",
+                    gender: userData.gender || "other"
+                });
+
+                setFavorites(getFavorites.data || []);
+
+                setPlaylists(userData.playlists || []);
+
+                setHistory(historyWithDetails || []);
+
+                setError(null);
+
+            } catch (err) {
+                console.error("Lỗi lấy thông tin user:", err);
+                setError("Không thể tải thông tin người dùng");
+                if (err.response?.status === 401) {
+                    authApi.logout();
                     navigate("/login");
                 }
-            },
-            (authError) => {
-                console.error("Lỗi xác thực:", {
-                    message: authError.message,
-                    code: authError.code,
-                    stack: authError.stack,
-                });
-                setError("Lỗi xác thực. Vui lòng thử lại.");
-                toast.error("Lỗi xác thực. Vui lòng thử lại.", { toastId: "auth-error" });
-                console.log("Toast triggered: auth-error");
+            } finally {
+                setLoading(false);
             }
-        );
-        return () => unsubscribeAuth();
+        };
+
+        fetchUserData();
     }, [navigate]);
 
     // Lấy thông tin phim từ TMDB API
@@ -161,22 +161,24 @@ const User = () => {
             if (allMovies.length === 0) return;
 
             setLoading(true);
+
             try {
                 const details = {};
                 for (const { movieId, type } of allMovies) {
-                    const key = `${movieId}-${type}`;
+                    const key = `${movieId}`;
                     if (!details[key]) {
-                        const data = await tmdbApi.getContentDetails(movieId, type);
+                        // const data = await tmdbApi.getContentDetails(movieId, type);
+                        const dataJK = await cdnApi.getContentDetails(movieId);
+                        console.log("DATA JK", dataJK);
                         details[key] = {
-                            title: type === "movie" ? data.title : data.name,
-                            poster: data.poster_path
-                                ? `https://image.tmdb.org/t/p/w200${data.poster_path}`
-                                : null,
-                            year: type === "movie" ? data.release_date?.slice(0, 4) : data.first_air_date?.slice(0, 4),
-                            type: type === "movie" ? "Phim" : "TV Show",
+                            title: dataJK.title,
+                            poster: `${import.meta.env.VITE_API_BASE_URL}/assets/get_assets_web?linkAssets=${dataJK.imageUrl}&nameTag=poster`,
+                            year: dataJK.releaseYear,
+                            type: "movie",
                         };
                     }
                 }
+                console.log("DETAILS", details);
                 setMovieDetails(details);
                 setError(null);
             } catch (err) {
@@ -198,14 +200,21 @@ const User = () => {
 
     // Xóa phim khỏi favorites
     const handleRemoveFavorite = async (movieData) => {
-        if (!auth.currentUser) return;
+        if (!authApi.isAuthenticated()) return;
 
         setLoading(true);
-        const userRef = doc(db, "users", auth.currentUser.uid);
         try {
-            await retryOperation(() => updateDoc(userRef, { favorites: arrayRemove(movieData) }));
+            const response = await axios.delete(
+                `${import.meta.env.VITE_API_BASE_URL}/movies/delete_favorite?email=${currentUser.email}&movieId=${movieData.movieId}`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${authApi.getAccessToken()}`
+                    }
+                }
+            );
             toast.success("Đã xóa phim khỏi danh sách yêu thích!", { toastId: "remove-favorite" });
             console.log("Toast triggered: remove-favorite");
+            setFavorites(prev => prev.filter(item => item.movieId !== movieData.movieId || item.type !== movieData.type));
         } catch (err) {
             console.error("Lỗi xóa yêu thích:", {
                 message: err.message,
@@ -222,26 +231,30 @@ const User = () => {
 
     // Xóa phim khỏi playlist
     const handleRemoveFromPlaylist = async (playlistId, movieData) => {
-        if (!auth.currentUser) return;
+        if (!authApi.isAuthenticated()) return;
 
         setLoading(true);
-        const userRef = doc(db, "users", auth.currentUser.uid);
         try {
-            const updatedPlaylists = playlists.map((playlist) =>
-                playlist.id === playlistId
-                    ? {
-                          ...playlist,
-                          movies: (playlist.movies || []).filter(
-                              (m) => m.movieId !== movieData.movieId || m.type !== movieData.type
-                          ),
-                      }
-                    : playlist
+            const response = await axios.delete(
+                `${import.meta.env.VITE_API_BASE_URL}/api/v1/users/playlists/${playlistId}/movies/${movieData.movieId}`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${authApi.getAccessToken()}`
+                    }
+                }
             );
-            const batch = writeBatch(db);
-            batch.update(userRef, { playlists: updatedPlaylists });
-            await retryOperation(() => batch.commit());
             toast.success("Đã xóa phim khỏi playlist!", { toastId: "remove-playlist" });
             console.log("Toast triggered: remove-playlist");
+            setPlaylists(prev => prev.map(playlist =>
+                playlist.id === playlistId
+                    ? {
+                        ...playlist,
+                        movies: (playlist.movies || []).filter(
+                            (m) => m.movieId !== movieData.movieId || m.type !== movieData.type
+                        ),
+                    }
+                    : playlist
+            ));
         } catch (err) {
             console.error("Lỗi xóa khỏi playlist:", {
                 message: err.message,
@@ -258,17 +271,21 @@ const User = () => {
 
     // Xóa playlist
     const handleDeletePlaylist = async (playlistId) => {
-        if (!auth.currentUser) return;
+        if (!authApi.isAuthenticated()) return;
 
         setLoading(true);
-        const userRef = doc(db, "users", auth.currentUser.uid);
         try {
-            const updatedPlaylists = playlists.filter((playlist) => playlist.id !== playlistId);
-            const batch = writeBatch(db);
-            batch.update(userRef, { playlists: updatedPlaylists });
-            await retryOperation(() => batch.commit());
+            const response = await axios.delete(
+                `${import.meta.env.VITE_API_BASE_URL}/api/v1/users/playlists/${playlistId}`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${authApi.getAccessToken()}`
+                    }
+                }
+            );
             toast.success("Đã xóa playlist!", { toastId: "delete-playlist" });
             console.log("Toast triggered: delete-playlist");
+            setPlaylists(prev => prev.filter(playlist => playlist.id !== playlistId));
         } catch (err) {
             console.error("Lỗi xóa playlist:", {
                 message: err.message,
@@ -287,46 +304,38 @@ const User = () => {
     const handleProfileUpdate = async (e) => {
         e.preventDefault();
         try {
-            const userRef = doc(db, "users", auth.currentUser.uid);
-            await retryOperation(() => updateProfile(auth.currentUser, { displayName: currentUser.name }));
-            await retryOperation(() =>
-                updateDoc(userRef, {
+            const response = await axios.put(
+                `${import.meta.env.VITE_API_BASE_URL}/api/v1/users/profile`,
+                {
                     name: currentUser.name,
-                    gender: currentUser.gender || "other",
-                })
+                    gender: currentUser.gender
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${authApi.getAccessToken()}`
+                    }
+                }
             );
+
+            setCurrentUser(prev => ({
+                ...prev,
+                ...response.data
+            }));
+
             setError(null);
-            toast.success("Cập nhật thông tin thành công!", { toastId: "profile-update" });
-            console.log("Toast triggered: profile-update");
+            toast.success("Cập nhật thông tin thành công!");
         } catch (err) {
-            console.error("Lỗi cập nhật hồ sơ:", {
-                message: err.message,
-                code: err.code,
-                stack: err.stack,
-            });
-            setError("Không thể cập nhật hồ sơ.");
-            toast.error("Không thể cập nhật hồ sơ.", { toastId: "profile-update-error" });
-            console.log("Toast triggered: profile-update-error");
+            console.error("Lỗi cập nhật hồ sơ:", err);
+            setError("Không thể cập nhật hồ sơ");
+            toast.error("Không thể cập nhật hồ sơ");
         }
     };
 
     // Đăng xuất
-    const handleSignOut = async () => {
-        try {
-            await retryOperation(() => signOut(auth));
-            navigate("/login");
-            toast.success("Đã đăng xuất thành công!", { toastId: "sign-out" });
-            console.log("Toast triggered: sign-out");
-        } catch (err) {
-            console.error("Lỗi đăng xuất:", {
-                message: err.message,
-                code: err.code,
-                stack: err.stack,
-            });
-            setError("Lỗi đăng xuất. Vui lòng thử lại.");
-            toast.error("Lỗi đăng xuất. Vui lòng thử lại.", { toastId: "sign-out-error" });
-            console.log("Toast triggered: sign-out-error");
-        }
+    const handleSignOut = () => {
+        authApi.logout();
+        navigate("/login");
+        toast.success("Đã đăng xuất thành công!");
     };
 
     // Cập nhật tab trong URL
@@ -372,44 +381,40 @@ const User = () => {
                         <nav className="!space-y-2">
                             <button
                                 onClick={() => setActiveTab("favorites")}
-                                className={`flex items-center !p-3 w-full text-left rounded cursor-pointer ${
-                                    activeTab === "favorites"
-                                        ? "text-white bg-gray-700"
-                                        : "text-gray-300 hover:text-white hover:bg-gray-700"
-                                }`}
+                                className={`flex items-center !p-3 w-full text-left rounded cursor-pointer ${activeTab === "favorites"
+                                    ? "text-white bg-gray-700"
+                                    : "text-gray-300 hover:text-white hover:bg-gray-700"
+                                    }`}
                             >
                                 <FaHeart className="!mr-3 w-5 text-center" />
                                 <span>Yêu thích</span>
                             </button>
                             <button
                                 onClick={() => setActiveTab("playlist")}
-                                className={`flex items-center !p-3 w-full text-left rounded cursor-pointer ${
-                                    activeTab === "playlist"
-                                        ? "text-white bg-gray-700"
-                                        : "text-gray-300 hover:text-white hover:bg-gray-700"
-                                }`}
+                                className={`flex items-center !p-3 w-full text-left rounded cursor-pointer ${activeTab === "playlist"
+                                    ? "text-white bg-gray-700"
+                                    : "text-gray-300 hover:text-white hover:bg-gray-700"
+                                    }`}
                             >
                                 <FaPlus className="!mr-3 w-5 text-center" />
                                 <span>Danh sách</span>
                             </button>
                             <button
                                 onClick={() => setActiveTab("history")}
-                                className={`flex items-center !p-3 w-full text-left rounded cursor-pointer ${
-                                    activeTab === "history"
-                                        ? "text-white bg-gray-700"
-                                        : "text-gray-300 hover:text-white hover:bg-gray-700"
-                                }`}
+                                className={`flex items-center !p-3 w-full text-left rounded cursor-pointer ${activeTab === "history"
+                                    ? "text-white bg-gray-700"
+                                    : "text-gray-300 hover:text-white hover:bg-gray-700"
+                                    }`}
                             >
                                 <FaClockRotateLeft className="!mr-3 w-5 text-center" />
                                 <span>Xem tiếp</span>
                             </button>
                             <button
                                 onClick={() => setActiveTab("profile")}
-                                className={`flex items-center !p-3 w-full text-left rounded cursor-pointer ${
-                                    activeTab === "profile"
-                                        ? "text-white bg-gray-700"
-                                        : "text-gray-300 hover:text-white hover:bg-gray-700"
-                                }`}
+                                className={`flex items-center !p-3 w-full text-left rounded cursor-pointer ${activeTab === "profile"
+                                    ? "text-white bg-gray-700"
+                                    : "text-gray-300 hover:text-white hover:bg-gray-700"
+                                    }`}
                             >
                                 <FaUser className="!mr-3 w-5 text-center" />
                                 <span>Tài khoản</span>
@@ -593,7 +598,7 @@ const User = () => {
                                 {favorites.length > 0 && (
                                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
                                         {favorites.map((item) => {
-                                            const key = `${item.movieId}-${item.type}`;
+                                            const key = `${item.movieId}`;
                                             const movie = movieDetails[key] || {};
                                             return (
                                                 <div
@@ -734,9 +739,48 @@ const User = () => {
                                 <p className="text-gray-600">Danh sách phim bạn đang xem dở</p>
                             </div>
                             <div className="!p-6">
-                                <p className="text-gray-600 text-center">
-                                    Chưa có phim nào trong danh sách xem tiếp.
-                                </p>
+                                {history.length === 0 && !loading && (
+                                    <p className="text-gray-600 text-center">
+                                        Chưa có phim nào trong danh sách xem tiếp.
+                                    </p>
+                                )}
+                                {history.length > 0 && (
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                                        {history.map((item) => (
+                                            <div key={item.id} className="group relative flex flex-col items-center">
+                                                {item.movieDetails ? (
+                                                    <>
+                                                        <a
+                                                            href={`/xem-phim/${item.videoId}?position=${item.position}`}
+                                                            className="w-full h-60 relative"
+                                                        >
+                                                            <img
+                                                                src={item.movieDetails.poster}
+                                                                alt={item.movieDetails.title}
+                                                                className="w-full h-full object-cover rounded-md transition-all duration-300 group-hover:shadow-xl"
+                                                            />
+                                                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md flex items-center justify-center">
+                                                                <span className="text-white text-sm font-medium">
+                                                                    Tiếp tục xem
+                                                                </span>
+                                                            </div>
+                                                        </a>
+                                                        <div className="mt-3 text-center">
+                                                            <h3 className="text-sm font-semibold text-gray-800 truncate">
+                                                                {item.movieDetails.title}
+                                                            </h3>
+                                                            <p className="text-xs text-gray-500 mt-1">
+                                                                Tiến độ: {item.progress.toFixed(2)}%
+                                                            </p>
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <p>Không tìm thấy thông tin phim</p>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}

@@ -3,8 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import debounce from 'lodash/debounce';
 import tmdbApi from '../service/tmdbApi';
 import logo from '../assets/logo_title.png';
-import { auth } from '../service/firebase';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { useAuth } from '../context/AuthContext';
 import { FaHeart, FaPlus, FaClockRotateLeft, FaUser, FaRightFromBracket } from 'react-icons/fa6';
 
 // Hàm lấy tên viết tắt
@@ -24,27 +23,15 @@ const Navbar = ({ activeTab, setActiveTab }) => {
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
     const [suggestions, setSuggestions] = useState([]);
-    const [currentUser, setCurrentUser] = useState(null);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [error, setError] = useState(null);
     const navigate = useNavigate();
-
-    // Theo dõi trạng thái đăng nhập
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            setCurrentUser(user);
-            setError(null);
-        }, (authError) => {
-            console.error('Lỗi xác thực:', authError);
-            setError('Lỗi xác thực. Vui lòng thử lại sau.');
-        });
-        return () => unsubscribe();
-    }, []);
+    const { user, logout } = useAuth();
 
     // Đăng xuất
     const handleSignOut = async () => {
         try {
-            await signOut(auth);
+            await logout();
             setIsDropdownOpen(false);
             setIsMenuOpen(false);
             navigate('/login');
@@ -319,20 +306,20 @@ const Navbar = ({ activeTab, setActiveTab }) => {
                             )}
                         </div>
                     )}
-                    {currentUser ? (
+                    {user ? (
                         <div className="relative !ml-7">
                             <button
                                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                                 className="relative inline-flex items-center justify-center w-10 h-10 cursor-pointer overflow-hidden bg-gray-600 rounded-full"
                                 aria-label="User menu"
                             >
-                                <span className="font-medium text-gray-300">{getInitials(currentUser.displayName)}</span>
+                                <span className="font-medium text-gray-300">{getInitials(user.name)}</span>
                             </button>
                             {isDropdownOpen && (
                                 <div className="absolute right-0 !mt-2 w-44 bg-gray-700 rounded-lg shadow-sm z-50 divide-y divide-gray-600">
                                     <div className="!px-4 !py-3 text-sm text-white">
-                                        <div>{currentUser.displayName || 'Người dùng'}</div>
-                                        <div className="font-medium truncate">{currentUser.email}</div>
+                                        <div>{user.name || 'Người dùng'}</div>
+                                        <div className="font-medium truncate">{user.email}</div>
                                     </div>
                                     <ul className="!py-2 text-sm text-gray-200" aria-labelledby="avatarButton">
                                         <li>
@@ -415,7 +402,7 @@ const Navbar = ({ activeTab, setActiveTab }) => {
                             </NavLink>
                         </li>
                     ))}
-                    {currentUser && (
+                    {user && (
                         <>
                             <li>
                                 <button

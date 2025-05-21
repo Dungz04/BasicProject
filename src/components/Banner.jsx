@@ -17,13 +17,14 @@ const Banner = () => {
             try {
                 setIsLoading(true);
                 const movies = await getAllMovies(); // Gọi API lấy danh sách phim
+                console.log(movies);
                 // Chuẩn hóa dữ liệu để phù hợp với component
                 const contentWithDetails = movies.map((movie) => ({
                     id: movie.movieId,
                     title: movie.title,
-                    backdrop_path: `${import.meta.env.VITE_CDN_URL}/uploads/backdrops/${movie.backdropUrl}`,
-                    poster_path: `${import.meta.env.VITE_CDN_URL}/uploads/images/${movie.imageUrl}`,
-                    video_path: `${import.meta.env.VITE_CDN_URL}/uploads/videos/${movie.videoUrl}`,
+                    backdrop_path: `${import.meta.env.VITE_CDN_URL}/${movie.backdropUrl}`,
+                    poster_path: `${import.meta.env.VITE_CDN_URL}/${movie.imageUrl}`,
+                    video_path: `${import.meta.env.VITE_CDN_URL}/${movie.videoUrl}`,
                     overview: movie.overviewString,
                     genres: movie.genres.split(",").map((g) => ({ name: g.trim() })), // Chuyển genres thành mảng
                     vote_average: movie.rating,

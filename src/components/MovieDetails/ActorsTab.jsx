@@ -1,6 +1,8 @@
 import React from "react";
 
-const ActorsTab = ({ actors = [], active, loading = false }) => {
+
+
+const ActorsTab = ({ actors = [], active, loading = false, title }) => {
     if (loading) {
         return (
             <div className={`fade tab-pane ${active ? "active show" : ""}`}>
@@ -24,6 +26,23 @@ const ActorsTab = ({ actors = [], active, loading = false }) => {
         );
     }
 
+    const castListName = actors?.data?.castName
+        ? (typeof actors.data.castName === 'string'
+            ? actors.data.castName.split(',').map(item => item.trim())
+            : Array.isArray(actors.data.castName)
+                ? actors.data.castName
+                : [])
+        : [];
+
+
+    const castListData = actors?.data?.castData
+        ? (typeof actors.data.castData === 'string'
+            ? actors.data.castData.split(',').map(item => item.trim())
+            : Array.isArray(actors.data.castData)
+                ? actors.data.castData
+                : [])
+        : [];
+
     const getActorsClass = () => {
         if (actors.length === 1) return "flex justify-start gap-0";
         if (actors.length === 2) return "flex flex-wrap justify-start gap-4";
@@ -37,24 +56,22 @@ const ActorsTab = ({ actors = [], active, loading = false }) => {
                     <div className="text-white font-bold text-3xl text-center !pl-4">Diễn viên</div>
                 </div>
                 <div className={`${getActorsClass()} !p-4`}>
-                    {actors.length > 0 ? (
-                        actors.map((actor) => (
+                    {castListName.length > 0 ? (
+                        castListName.map((actor, index) => (
                             <div
-                                key={actor.id}
+                                key={index}
                                 className="bg-[#1e1e2a] rounded-lg overflow-hidden text-center text-white !p-2 transition-transform duration-300  active:scale-[0.98] w-full max-w-[200px]"
                             >
                                 <div className="w-full">
                                     <a
                                         className="block w-full aspect-[2/3] overflow-hidden"
-                                        aria-label={`Xem thông tin diễn viên ${actor.name}`}
+                                        aria-label={`Xem thông tin diễn viên ${castListData[index]}`}
                                     >
                                         <img
                                             src={
-                                                actor.profile_path
-                                                    ? `https://image.tmdb.org/t/p/w500${actor.profile_path}`
-                                                    : "https://via.placeholder.com/150?text=No+Image"
+                                                `${import.meta.env.VITE_API_BASE_URL}/assets/get_assets_web?linkAssets=${castListData[index]}&nameTag=cast&nameMovie=${title}`
                                             }
-                                            alt={actor.name || "Diễn viên không xác định"}
+                                            alt={castListData[index] || "Diễn viên không xác định"}
                                             loading="lazy"
                                             className="w-full h-full object-cover rounded-lg transition-transform duration-300 hover:-translate-y-1"
                                         />
@@ -65,12 +82,12 @@ const ActorsTab = ({ actors = [], active, loading = false }) => {
                                                 href={`/dien-vien/${actor.id}`}
                                                 className="text-white hover:text-[#e50914] transition-colors duration-300"
                                             >
-                                                {actor.name || "Không xác định"}
+                                                {castListName[index] || "Không xác định"}
                                             </span>
                                         </h4>
-                                        <div className="text-sm text-gray-400 !mt-1">
+                                        {/* <div className="text-sm text-gray-400 !mt-1">
                                             <span>{actor.character || "Không có vai diễn"}</span>
-                                        </div>
+                                        </div> */}
                                     </div>
                                 </div>
                             </div>

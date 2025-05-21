@@ -73,15 +73,13 @@ const EpisodesTab = ({ movie, active }) => {
                 {!isSeries ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <a
-                            href={`/xem-phim/${movie.id}`}
+                            href={`/xem-phim/${movie.movieId}`}
                             className="flex bg-[#1f1f1f] hover:bg-[#2a2a2a] transition-all duration-300 rounded-xl overflow-hidden shadow-lg group relative translate-y-2"
                         >
                             <div className="w-[50%] max-w-[130px] relative">
                                 <img
                                     src={
-                                        movie.poster_path
-                                            ? `https://image.tmdb.org/t/p/w300${movie.poster_path}`
-                                            : "https://via.placeholder.com/300x450?text=No+Image"
+                                        `${import.meta.env.VITE_API_BASE_URL}/assets/get_assets_web?linkAssets=${movie.imageUrl}&nameTag=poster`
                                     }
                                     alt={title}
                                     className="w-full h-full object-cover"
@@ -114,9 +112,8 @@ const EpisodesTab = ({ movie, active }) => {
                             </div>
 
                             <div
-                                className={`absolute top-full left-0 bg-[#222222f6] text-black-600 border border-gray-300 rounded shadow-lg transition-all duration-200 z-10 ${
-                                    showDropdown ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-                                }`}
+                                className={`absolute top-full left-0 bg-[#222222f6] text-black-600 border border-gray-300 rounded shadow-lg transition-all duration-200 z-10 ${showDropdown ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+                                    }`}
                             >
                                 {Array.from({ length: movie.number_of_seasons || 1 }, (_, i) => i + 1).map(
                                     (season) => (
@@ -152,7 +149,7 @@ const EpisodesTab = ({ movie, active }) => {
                                     <a
                                         key={episode.id}
                                         className="flex items-center justify-center gap-2 !px-4 !py-3 bg-gray-800 text-white rounded-lg hover:bg-red-600 hover:scale-105 transition-all"
-                                        href={`/xem-phim/${movie.id}/season/${selectedSeason}/episode/${episode.episode_number}`}
+                                        href={`/xem-phim/${movie.movieId}/season/${selectedSeason}/episode/${episode.episode_number}`}
                                     >
                                         <FontAwesomeIcon icon={faPlay} className="text-sm" />
                                         Tập {episode.episode_number}

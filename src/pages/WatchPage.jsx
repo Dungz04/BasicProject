@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import tmdbApi from "../service/tmdbApi.jsx";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlay, faAngleLeft, faCaretDown } from "@fortawesome/free-solid-svg-icons";
+import { faPlay, faAngleLeft, faCaretDown, faCog, faPause } from "@fortawesome/free-solid-svg-icons";
+import cdnApi from "../service/cdnApi.jsx";
+import Hls from 'hls.js';
 
 const WatchPage = () => {
     const { movieId, season, episode } = useParams();
@@ -12,17 +14,32 @@ const WatchPage = () => {
     let type = queryParams.get("type") || (season || episode ? "tv" : "movie");
 
     const [content, setContent] = useState(null);
+    const [contentJk, setContentJk] = useState(null);
     const [episodes, setEpisodes] = useState([]);
     const [currentEpisode, setCurrentEpisode] = useState(null);
     const [currentSeason, setCurrentSeason] = useState(parseInt(season) || 1);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [videoError, setVideoError] = useState(null);
+    const [isVideoReady, setIsVideoReady] = useState(false); // Trạng thái mới cho video
     const [isSeasonDropdownOpen, setIsSeasonDropdownOpen] = useState(false);
     const [ageRating, setAgeRating] = useState("");
-    const [recommendations, setRecommendations] = useState([]);
+    const [recommendations, setRecommendations] = useState(() => []);
+    const [qualityLevels, setQualityLevels] = useState(() => []);
+    const [selectedQuality, setSelectedQuality] = useState(-1); // -1 for auto
+    const [isQualityMenuOpen, setIsQualityMenuOpen] = useState(false);
+    const [isVideoHovered, setIsVideoHovered] = useState(false); // For controlling button visibility
+    const [isVideoPlaying, setIsVideoPlaying] = useState(false); // Track play/pause state
+
+    const position = queryParams.get("position");
 
     const version = { id: 1, type: "pd", label: "Phụ đề", bgColor: "bg-[#5e6070]" };
+
+    const videoRef = useRef(null);
+    const hlsRef = useRef(null); 
+    const hideControlsTimeoutRef = useRef(null); 
+
+    const stableContentJk = useMemo(() => contentJk, [contentJk?.urlPlayer]);
 
     useEffect(() => {
         const fetchContentData = async () => {
@@ -36,24 +53,43 @@ const WatchPage = () => {
                 setLoading(true);
                 setError(null);
                 setVideoError(null);
+                setIsVideoReady(false); // Reset trạng thái video
 
                 let contentType = type;
                 let contentDetails;
-
+                let contentDetailsJk;
                 try {
                     contentDetails = await tmdbApi.getContentDetails(movieId, contentType);
+                    contentDetailsJk = await cdnApi.getContentDetails(movieId);
                 } catch (err) {
                     const fallbackType = contentType === "movie" ? "tv" : "movie";
                     contentDetails = await tmdbApi.getContentDetails(movieId, fallbackType);
+                    contentDetailsJk = await cdnApi.getContentDetails(movieId);
                     contentType = fallbackType;
                 }
 
-                if (!contentDetails) throw new Error("Không tìm thấy nội dung");
+                if (!contentDetailsJk) {
+                    throw new Error("Không tìm thấy nội dung");
+                }
 
                 const credits = await tmdbApi.getContentCredits(movieId, contentType);
+
+                const videoUrl = await cdnApi.getAssets(contentDetailsJk.videoUrl, "video");
+                if (!videoUrl?.url) {
+                    throw new Error("Không tìm thấy URL video hợp lệ");
+                }
+
+                const castList = await cdnApi.getCastList(contentDetailsJk.title);
+
+                console.log("VIDEO URL:", videoUrl.url);
+
+                setContentJk({ ...contentDetailsJk, castList, urlPlayer: videoUrl.url });
+                
+                setIsVideoReady(true); // Đánh dấu video sẵn sàng
+
                 setContent({ ...contentDetails, credits, type: contentType });
 
-                const rating = await getAgeRating(contentDetails, contentType, movieId);
+                const rating = contentDetailsJk.rating;
                 setAgeRating(rating);
 
                 const recs = await tmdbApi.getContentRecommendations(movieId, contentType);
@@ -95,15 +131,162 @@ const WatchPage = () => {
         fetchContentData();
     }, [movieId, type, currentSeason, episode]);
 
-    const handleEpisodeChange = (episodeNumber) => {
-        const selectedEpisode = episodes.find((ep) => ep.episode_number === episodeNumber);
+    useEffect(() => {
+        let hls = hlsRef.current; // Use hlsRef.current
+
+        const initVideo = () => {
+            if (!videoRef.current) {
+                console.warn('videoRef.current is null, retrying...');
+                const timeout = setTimeout(initVideo, 100); // Thử lại sau 100ms
+                return () => clearTimeout(timeout);
+            }
+
+            if (!stableContentJk?.urlPlayer || !isVideoReady) {
+                console.warn('Skipping video init: contentJk.urlPlayer or isVideoReady not ready');
+                return;
+            }
+
+            const videoUrl = stableContentJk.urlPlayer;
+            console.log('Initializing video with URL:', videoUrl);
+
+            if (Hls.isSupported()) {
+                if (hls) {
+                    console.warn('HLS instance already exists, destroying previous instance');
+                    hls.destroy();
+                }
+
+                hls = new Hls({
+                    debug: false,
+                    enableWorker: true,
+                    lowLatencyMode: true,
+                });
+                hlsRef.current = hls; // Store HLS instance in ref
+
+                hls.loadSource(videoUrl);
+                hls.attachMedia(videoRef.current);
+
+                hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
+                    console.log('HLS manifest parsed', data.levels);
+                    setQualityLevels(data.levels.map((level, index) => ({
+                        height: level.height,
+                        bitrate: level.bitrate,
+                        index: index
+                    })));
+                    setSelectedQuality(hls.currentLevel); // Set initial quality (often auto, which is -1)
+
+                    if (position) {
+                        videoRef.current.currentTime = Number(position);
+                    }
+                });
+
+                hls.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
+                    setSelectedQuality(data.level);
+                    console.log(`HLS quality switched to level index: ${data.level}`);
+                });
+
+                hls.on(Hls.Events.ERROR, (event, data) => {
+                    console.error('HLS error:', data);
+                    if (data.fatal) {
+                        setVideoError(`Lỗi tải HLS: ${data.type}`);
+                        if (hlsRef.current) { // Use hlsRef.current
+                            hlsRef.current.destroy();
+                            hlsRef.current = null;
+                        }
+                    }
+                });
+            } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
+                videoRef.current.src = videoUrl;
+                const playHandler = () => {
+                    videoRef.current?.play().catch(error => {
+                        console.warn('Native HLS auto-play failed:', error);
+                        if (error.name !== 'NotAllowedError') {
+                            setVideoError('Không thể tự động phát video');
+                        }
+                    });
+                };
+                videoRef.current.addEventListener('loadedmetadata', playHandler);
+                videoRef.current.playHandler = playHandler;
+            } else {
+                setVideoError('Trình duyệt không hỗ trợ HLS');
+            }
+        };
+
+        initVideo();
+
+        return () => {
+            if (hlsRef.current) { // Use hlsRef.current
+                console.log('Destroying HLS instance on cleanup');
+                hlsRef.current.destroy();
+                hlsRef.current = null;
+            }
+            if (videoRef.current && videoRef.current.playHandler) {
+                videoRef.current.removeEventListener('loadedmetadata', videoRef.current.playHandler);
+            }
+        };
+    }, [stableContentJk, isVideoReady, position]);
+
+    useEffect(() => {
+        const videoElement = videoRef.current;
+        if (videoElement) {
+            const handlePlay = () => setIsVideoPlaying(true);
+            const handlePause = () => setIsVideoPlaying(false);
+
+            videoElement.addEventListener('play', handlePlay);
+            videoElement.addEventListener('pause', handlePause);
+
+            // Set initial state based on video's current paused state
+            setIsVideoPlaying(!videoElement.paused);
+
+            return () => {
+                videoElement.removeEventListener('play', handlePlay);
+                videoElement.removeEventListener('pause', handlePause);
+            };
+        }
+    }, [videoRef.current]); // Rerun if videoRef.current changes (e.g. on initial mount)
+
+    useEffect(() => {
+        return () => {
+            if (hideControlsTimeoutRef.current) {
+                clearTimeout(hideControlsTimeoutRef.current);
+            }
+        };
+    }, []);
+
+    const handleQualityChange = (qualityIndex) => {
+        if (hlsRef.current) {
+            hlsRef.current.currentLevel = qualityIndex;
+            // setSelectedQuality will be updated by LEVEL_SWITCHED event, or we can set it here too for immediate UI feedback
+            // setSelectedQuality(qualityIndex); 
+            console.log(`Attempting to change HLS quality to: ${qualityIndex === -1 ? 'Auto' : qualityLevels.find(q => q.index === qualityIndex)?.height + 'p'}`);
+        }
+        setIsQualityMenuOpen(false); // Close menu after selection
+    };
+
+    const handleMouseEnterVideo = () => {
+        if (hideControlsTimeoutRef.current) {
+            clearTimeout(hideControlsTimeoutRef.current);
+            hideControlsTimeoutRef.current = null;
+        }
+        setIsVideoHovered(true);
+    };
+
+    const handleMouseLeaveVideo = () => {
+        hideControlsTimeoutRef.current = setTimeout(() => {
+            setIsVideoHovered(false);
+        }, 500); // 500ms delay before hiding
+    };
+
+    const handleEpisodeClick = (ep) => {
+        setVideoError(null); // Reset videoError khi chuyển tập
+        const selectedEpisode = episodes.find((ep) => ep.episode_number === ep.episode_number);
         if (selectedEpisode) {
             setCurrentEpisode(selectedEpisode);
-            navigate(`/xem-phim/${movieId}/season/${currentSeason}/episode/${episodeNumber}?type=tv`);
+            navigate(`/xem-phim/${movieId}/season/${currentSeason}/episode/${ep.episode_number}?type=tv`);
         }
     };
 
     const handleSeasonChange = (seasonNumber) => {
+        setVideoError(null); // Reset videoError khi chuyển mùa
         setCurrentSeason(seasonNumber);
         setIsSeasonDropdownOpen(false);
         navigate(`/xem-phim/${movieId}/season/${seasonNumber}/episode/1?type=tv`);
@@ -114,39 +297,9 @@ const WatchPage = () => {
         return `${minutes} phút`;
     };
 
-    const getAgeRating = async (content, type, id) => {
-        try {
-            if (content?.adult) return "Adult";
-
-            if (type === "tv") {
-                let usRating = content?.content_ratings?.results?.find((r) => r.iso_3166_1 === "US");
-                if (!usRating) {
-                    const contentRatings = await tmdbApi.getContentReleaseInfo(id, type);
-                    // Xử lý cấu trúc dữ liệu linh hoạt
-                    const results = contentRatings?.results || contentRatings || [];
-                    usRating = Array.isArray(results)
-                        ? results.find((r) => r.iso_3166_1 === "US")
-                        : null;
-                }
-                return usRating?.rating || "";
-            }
-
-            const releaseInfo = await tmdbApi.getContentReleaseInfo(id, type);
-            const usRelease = releaseInfo.find((r) => r.iso_3166_1 === "US");
-            if (usRelease?.release_dates?.length > 0) {
-                const certification = usRelease.release_dates.find((d) => d.certification)?.certification;
-                return certification || "";
-            }
-
-            return "";
-        } catch (error) {
-            console.error(`❌ Error fetching age rating for ${type} ${id}:`, error.message);
-            return "";
-        }
-    };
-
-    const handleVideoError = () => {
-        setVideoError("Chưa có video khả dụng cho nội dung này.");
+    const handleVideoError = (error) => {
+        console.error('Lỗi video:', error);
+        setVideoError(error.message);
     };
 
     if (loading) {
@@ -194,9 +347,31 @@ const WatchPage = () => {
         );
     }
 
-    const title = content.title || content.name;
-    const runtime = type === "movie" ? content.runtime : currentEpisode?.runtime;
-    const year = content.release_date?.substring(0, 4) || content.first_air_date?.substring(0, 4);
+    const title = contentJk?.title || contentJk?.name;
+    const runtime = contentJk?.duration;
+    const year = contentJk?.releaseYear;
+
+    const genreList = typeof contentJk?.genres === 'string'
+        ? contentJk.genres.split(',').map(genre => ({ name: genre.trim() }))
+        : Array.isArray(contentJk?.genres)
+            ? contentJk.genres
+            : [];
+
+    const castListName = contentJk?.castList?.data?.castName
+        ? (typeof contentJk.castList.data.castName === 'string'
+            ? contentJk.castList.data.castName.split(',').map(item => item.trim())
+            : Array.isArray(contentJk.castList.data.castName)
+                ? contentJk.castList.data.castName
+                : [])
+        : [];
+
+    const castListData = contentJk?.castList?.data?.castData
+        ? (typeof contentJk.castList.data.castData === 'string'
+            ? contentJk.castList.data.castData.split(',').map(item => item.trim())
+            : Array.isArray(contentJk.castList.data.castData)
+                ? contentJk.castList.data.castData
+                : [])
+        : [];
 
     return (
         <div className="lg:px-4 px-2 bg-[#0f0f0f] min-h-screen text-white">
@@ -223,23 +398,53 @@ const WatchPage = () => {
                         <div className="w-full h-full flex justify-center items-center bg-black text-red-500">
                             <p>{videoError}</p>
                         </div>
-                    ) : (
-                        <video
-                            controls
-                            className="w-full h-full"
-                            autoPlay
-                            onError={handleVideoError}
+                    ) : isVideoReady ? (
+                        <div 
+                            className="relative w-full h-full" 
+                            onMouseEnter={handleMouseEnterVideo}
+                            onMouseLeave={handleMouseLeaveVideo}
                         >
-                            <source
-                                src={
-                                    type === "tv" && currentEpisode
-                                        ? `https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4`
-                                        : `https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4`
-                                }
-                                type="video/mp4"
-                            />
-                            Trình duyệt của bạn không hỗ trợ video.
-                        </video>
+                            <video ref={videoRef} className="w-full h-full object-contain" controls={true} />
+
+                            {/* Custom Settings Button Overlay */}
+                            {qualityLevels.length > 0 && (isVideoHovered || isQualityMenuOpen || !isVideoPlaying) && (
+                                <div className="absolute bottom-12 right-[100px] md:bottom-11 md:right-[220px] z-20">
+                                    <div className="relative inline-block">
+                                        <button
+                                            onClick={() => setIsQualityMenuOpen(!isQualityMenuOpen)}
+                                            className="text-white p-2 bg-black bg-opacity-60 rounded-full hover:bg-opacity-80 transition-opacity focus:outline-none"
+                                            title="Cài đặt chất lượng"
+                                        >
+                                            <FontAwesomeIcon icon={faCog} size="xl" /> {/* Increased size */}
+                                        </button>
+                                        {isQualityMenuOpen && (
+                                            <div className="absolute bottom-full right-0 mb-2 w-36 bg-black bg-opacity-80 p-2 rounded shadow-lg">
+                                                <div className="text-white text-sm mb-1 border-b border-gray-600 pb-1">Chất lượng</div>
+                                                <button
+                                                    onClick={() => handleQualityChange(-1)}
+                                                    className={`block w-full text-left px-2 py-1 text-xs rounded ${selectedQuality === -1 || hlsRef.current?.autoLevelEnabled ? 'bg-red-600' : 'hover:bg-gray-700'} text-white mb-1`}
+                                                >
+                                                    Tự động {selectedQuality === -1 || hlsRef.current?.autoLevelEnabled ? `(${qualityLevels.find(q => q.index === hlsRef.current?.currentLevel)?.height}p)` : ''}
+                                                </button>
+                                                {qualityLevels.map((level) => (
+                                                    <button
+                                                        key={level.index}
+                                                        onClick={() => handleQualityChange(level.index)}
+                                                        className={`block w-full text-left px-2 py-1 text-xs rounded ${selectedQuality === level.index && !hlsRef.current?.autoLevelEnabled ? 'bg-red-600' : 'hover:bg-gray-700'} text-white mb-0.5 last:mb-0`}
+                                                    >
+                                                        {level.height}p
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="w-full h-full flex justify-center items-center bg-black">
+                            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#e50914]"></div>
+                        </div>
                     )}
                 </div>
             </div>
@@ -254,9 +459,7 @@ const WatchPage = () => {
                                 <img
                                     className="w-[100px] object-cover rounded-lg"
                                     src={
-                                        content.poster_path
-                                            ? `https://image.tmdb.org/t/p/w300${content.poster_path}`
-                                            : "/images/no-poster.jpg"
+                                        `${import.meta.env.VITE_API_BASE_URL}/assets/get_assets_web?linkAssets=${contentJk.imageUrl}&nameTag=poster`
                                     }
                                     alt={title}
                                 />
@@ -268,46 +471,38 @@ const WatchPage = () => {
                                     <div className="flex items-center gap-2 mt-3 flex-wrap">
                                         {content.vote_average && (
                                             <div className="border border-[#e50914] rounded-[5px] !px-2">
-                                                <span className="text-[12px] px-1 text-white">
-                                                    TMDb {content.vote_average.toFixed(1)}
-                                                </span>
-                                            </div>
-                                        )}
-                                        {ageRating && (
-                                            <div className="bg-white rounded-[5px]">
-                                                <span className="text-[12px] !px-1.5 text-black font-bold">
-                                                    {ageRating}
+                                                <span className="text-xs bg-gray-800/50 !px-2 !py-1 rounded">
+                                                    TMDb {contentJk.rating}
                                                 </span>
                                             </div>
                                         )}
                                         <div className="border rounded-[5px]">
-                                            <span className="text-[12px] !px-1 text-white">{year}</span>
+                                            <span className="text-xs !px-1 text-white">{year}</span>
                                         </div>
                                         {runtime && (
                                             <div className="border rounded-[5px]">
-                                                <span className="text-[12px] !px-1 text-white">
+                                                <span className="text-xs !px-1 text-white">
                                                     {formatRuntime(runtime)}
                                                 </span>
                                             </div>
                                         )}
                                     </div>
                                     <div className="flex items-center gap-2 mt-3 flex-wrap">
-                                        {content.genres?.map((genre) => (
-                                            <div
-                                                key={genre.id}
-                                                className="bg-[#272931] rounded-[4px] !px-1"
-                                            >
-                                                <span className="p-2 text-[12px] text-white hover:text-[#e50914]">
+                                        {genreList.length > 0 ? (
+                                            genreList.map((genre, index) => (
+                                                <span key={index} className="bg-neutral-800 text-white text-xs !px-3 !py-2 rounded-md hover:bg-gradient-to-tr hover:from-red-500 hover:to-red-900 transition-transform duration-200 ">
                                                     {genre.name}
                                                 </span>
-                                            </div>
-                                        ))}
+                                            ))
+                                        ) : (
+                                            <span className="text-gray-400 text-sm">Không có thông tin thể loại</span>
+                                        )}
                                     </div>
                                 </div>
                             </div>
                             <div className="text-left max-w-[400px] !mr-1">
                                 <p className="overflow-hidden text-ellipsis line-clamp-4 text-[#AAAA] text-[14px]">
-                                    {content.overview || "Không có mô tả."}
+                                    {contentJk.overviewString || "Không có mô tả."}
                                 </p>
                                 <button
                                     onClick={() => navigate(`/phim/${movieId}?type=${type}`)}
@@ -334,9 +529,7 @@ const WatchPage = () => {
                                     <div className=" absolute top-0 bottom-0 right-0 !w-[40%] max-w-[130px] [mask-image:linear-gradient(270deg,#000_0,transparent_95%)]">
                                         <img
                                             src={
-                                                content.poster_path
-                                                    ? `https://image.tmdb.org/t/p/w300${content.poster_path}`
-                                                    : "https://via.placeholder.com/300x450?text=No+Image"
+                                                `${import.meta.env.VITE_API_BASE_URL}/assets/get_assets_web?linkAssets=${contentJk.imageUrl}&nameTag=poster`
                                             }
                                             alt={title}
                                             className="w-full h-full object-cover"
@@ -410,7 +603,7 @@ const WatchPage = () => {
                                                 ? "bg-[#e50914]"
                                                 : "bg-[#282B3A]"
                                                 }`}
-                                            onClick={() => handleEpisodeChange(ep.episode_number)}
+                                            onClick={() => handleEpisodeClick(ep)}
                                         >
                                             <FontAwesomeIcon
                                                 icon={faPlay}
@@ -429,31 +622,29 @@ const WatchPage = () => {
                 <div className="xl:w-1/3 flex !mr-4">
                     <div className="h-full w-[1px] bg-[#aaaaaa52] !ml-2 !mr-3"></div>
                     <div className="p-3 w-full">
-                        {content?.credits?.cast?.length > 0 && (
+                        {castListData.length > 0 && (
                             <>
                                 <p className="text-[30px] text-center text-white !mb-4">Diễn viên</p>
                                 <div className="mt-[20px] grid lg:grid-cols-3 grid-cols-2 gap-3">
-                                    {content.credits.cast.slice(0, 9).map((actor) => (
+                                    {castListData.slice(0, 5).map((actor, index) => (
                                         <div
-                                            key={actor.id}
+                                            key={index}
                                             className="flex flex-col items-center gap-1"
                                         >
                                             <img
                                                 src={
-                                                    actor.profile_path
-                                                        ? `https://image.tmdb.org/t/p/w200${actor.profile_path}`
-                                                        : "/images/no-profile.jpg"
+                                                    `${import.meta.env.VITE_API_BASE_URL}/assets/get_assets_web?linkAssets=${castListData[index]}&nameTag=cast&nameMovie=${title}`
                                                 }
-                                                alt={actor.name}
+                                                alt={castListName[index]}
                                                 className="w-16 h-24 object-cover rounded-lg transition-transform duration-300 hover:scale-105 hover:brightness-90"
                                             />
                                             <div>
                                                 <p className="font-medium hover:text-red-600 text-center">
-                                                    {actor.name}
+                                                    {castListName[index]}
                                                 </p>
-                                                <p className="text-sm text-gray-400 mt-1 text-center">
+                                                {/* <p className="text-sm text-gray-400 mt-1 text-center">
                                                     {actor.character || "Không có vai diễn"}
-                                                </p>
+                                                </p> */}
                                             </div>
                                         </div>
                                     ))}

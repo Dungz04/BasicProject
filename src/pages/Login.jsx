@@ -2,23 +2,19 @@ import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { toast } from 'react-toastify';
-import authApi from '../../service/authApi';
-import { useAuth } from '../../context/AuthContext';
+import authApi from '../service/authApi';
 
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const navigate = useNavigate();
-    const { login: setAuth } = useAuth();
 
     const handleLogin = async (e) => {
         e.preventDefault();
         setError('');
-        setMessage('');
         setLoading(true);
 
         if (!email || !password) {
@@ -30,46 +26,13 @@ const Login = () => {
         try {
             console.log('Đang thử đăng nhập với:', { email });
             const response = await authApi.login(email, password);
-
-            // Kiểm tra response có đầy đủ thông tin không
-            if (!response.accessToken || !response.email) {
-                throw new Error('Invalid response from server');
-            }
-
-            // Set authentication state với thông tin user
-            await setAuth({
-                name: response.name,
-                email: response.email,
-                role: response.role,
-                userId: response.userId
-            });
-
             console.log('Đăng nhập thành công:', { email });
             toast.success('Đăng nhập thành công!');
             navigate('/');
         } catch (error) {
             console.error('Lỗi đăng nhập:', error);
-            let errorMessage = 'Đăng nhập thất bại: ';
-
-            switch (error.response?.status) {
-                case 401:
-                    errorMessage += 'Email hoặc mật khẩu không đúng!';
-                    break;
-                case 404:
-                    errorMessage += 'Tài khoản không tồn tại!';
-                    break;
-                case 403:
-                    errorMessage += 'Tài khoản đã bị khóa!';
-                    break;
-                case 429:
-                    errorMessage += 'Quá nhiều lần thử đăng nhập. Vui lòng thử lại sau!';
-                    break;
-                default:
-                    errorMessage += error.message || 'Vui lòng thử lại sau.';
-            }
-
-            setError(errorMessage);
-            toast.error(errorMessage);
+            setError(error.message || 'Đăng nhập thất bại. Vui lòng thử lại!');
+            toast.error(error.message || 'Đăng nhập thất bại');
         } finally {
             setLoading(false);
         }
@@ -114,7 +77,6 @@ const Login = () => {
                             </button>
                         </div>
                         {error && <p className="text-red-400 text-sm !mb-2">{error}</p>}
-                        {message && <p className="text-green-400 text-sm !mb-2">{message}</p>}
                         <button
                             type="submit"
                             disabled={loading}
@@ -143,4 +105,4 @@ const Login = () => {
     );
 };
 
-export default Login;
+export default Login; 

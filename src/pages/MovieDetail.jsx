@@ -5,6 +5,7 @@ import "../styles/cssMovieDetails/MovieDetail.css";
 import MovieInfo from "../components/MovieDetails/MovieInfo";
 import MovieActions from "../components/MovieDetails/MovieActions";
 import TabsContent from "../components/MovieDetails/TabsContent";
+import cdnApi from "../service/cdnApi";
 
 const MovieDetail = () => {
     const { movieId } = useParams();
@@ -13,6 +14,7 @@ const MovieDetail = () => {
     const initialType = queryParams.get("type") || "movie";
 
     const [content, setContent] = useState(null);
+    const [contentjk, setContentjk] = useState(null);
     const [actors, setActors] = useState([]);
     const [recommendations, setRecommendations] = useState([]);
     const [activeTab, setActiveTab] = useState("episodes");
@@ -33,37 +35,43 @@ const MovieDetail = () => {
                 setError(null);
                 console.log("Đang lấy chi tiết:", { movieId, type });
 
-                let contentDetails = await tmdbApi.getContentDetails(movieId, type);
-                let finalType = type;
+                let contentDetailsjk = await cdnApi.getContentDetails(movieId);
 
-                if (!contentDetails) {
-                    console.log("Thử loại nội dung khác...");
-                    finalType = type === "movie" ? "tv" : "movie";
-                    contentDetails = await tmdbApi.getContentDetails(movieId, finalType);
-                    if (!contentDetails) {
-                        throw new Error("Không tìm thấy nội dung");
-                    }
-                }
+                const movieCast = await cdnApi.getCastList(contentDetailsjk.title);
 
-                const releaseInfo = await tmdbApi.getContentReleaseInfo(movieId, finalType);
+                // let contentDetails = await tmdbApi.getContentDetails(movieId, type);
+                let finalType = "movie";
+
+                // if (!contentDetails) {
+                //     console.log("Thử loại nội dung khác...");
+                //     finalType = type === "movie" ? "tv" : "movie";
+                //     contentDetails = await tmdbApi.getContentDetails(movieId, finalType);
+                //     if (!contentDetails) {
+                //         throw new Error("Không tìm thấy nội dung");
+                //     }
+                // }
+
+                // const releaseInfo = await tmdbApi.getContentReleaseInfo(movieId, finalType);
                 let certification = "N/A";
-                if (finalType === "movie") {
-                    const usRelease = releaseInfo.find((r) => r.iso_3166_1 === "US");
-                    certification = usRelease?.release_dates?.[0]?.certification || "N/A";
-                } else {
-                    const usRating = releaseInfo.find((r) => r.iso_3166_1 === "US");
-                    certification = usRating?.rating || "N/A";
-                }
+                // if (finalType === "movie") {
+                //     const usRelease = releaseInfo.find((r) => r.iso_3166_1 === "US");
+                //     certification = usRelease?.release_dates?.[0]?.certification || "N/A";
+                // } else {
+                //     const usRating = releaseInfo.find((r) => r.iso_3166_1 === "US");
+                //     certification = usRating?.rating || "N/A";
+                // }
 
-                const credits = await tmdbApi.getContentCredits(movieId, finalType);
-                const actorsList = credits?.cast.slice(0, 8) || [];
+                // const credits = await tmdbApi.getContentCredits(movieId, finalType);
 
-                const recommended = await tmdbApi.getContentRecommendations(movieId, finalType);
-                const recommendedList = recommended?.results.slice(0, 8) || [];
+                const actorsList = contentDetailsjk.movieCast || [];
 
-                setContent({ ...contentDetails, certification, type: finalType });
-                setActors(actorsList);
-                setRecommendations(recommendedList);
+                // const recommended = await tmdbApi.getContentRecommendations(3, finalType);
+                // const recommendedList = recommended?.results.slice(0, 8) || [];
+
+                setContent({ ...contentDetailsjk, certification, type: finalType });
+                setContentjk(contentDetailsjk);
+                setActors(movieCast);
+                // setRecommendations(recommendedList);
                 setType(finalType);
             } catch (err) {
                 console.error("Lỗi khi lấy dữ liệu:", err);
@@ -83,12 +91,12 @@ const MovieDetail = () => {
         return <div className="base-load error">{error}</div>;
     }
 
-    if (!content) {
+    if (!contentjk) {
         return <div className="base-load error">Không tìm thấy nội dung</div>;
     }
 
-    const title = content.title || content.name;
-    const originalTitle = content.original_title || content.original_name;
+    const title = contentjk.title;
+    const originalTitle = contentjk.title;
 
     return (
         <div className="base-load">
@@ -98,26 +106,26 @@ const MovieDetail = () => {
                 <div className="top-detail-wrap">
                     <div
                         className="background-fade"
-                        style={{ backgroundImage: `url(https://image.tmdb.org/t/p/original${content.backdrop_path || "C:\Users\BasicProject\src\assets\Backdrops\default_drop.jpg"})` }}
+                        style={{ backgroundImage: `url(${import.meta.env.VITE_API_BASE_URL}/assets/get_assets_web?linkAssets=${contentjk.backdropUrl}&nameTag=backdrop)` }}
                     />
                     <div className="cover-fade">
                         <div
                             className="cover-image"
-                            style={{ backgroundImage: `url(https://image.tmdb.org/t/p/original${content.backdrop_path || "C:\Users\BasicProject\src\assets\Backdrops\default_drop.jpg"})` }}
+                            style={{ backgroundImage: `url(${import.meta.env.VITE_API_BASE_URL}/assets/get_assets_web?linkAssets=${contentjk.backdropUrl}&nameTag=backdrop)` }}
                         />
                     </div>
                 </div>
                 <div id="wrapper" className="wrapper-w-slide">
                     <div className="detail-container">
                         <div className="dc-side">
-                            <MovieInfo movie={content} />
+                            <MovieInfo movie={contentjk} />
                         </div>
                         <div className="dc-main">
-                            <MovieActions movieId={content.id} type={type} />
+                            <MovieActions movieId={content.movieId} type={type} />
                             <TabsContent
                                 activeTab={activeTab}
                                 setActiveTab={setActiveTab}
-                                movie={content}
+                                movie={contentjk}
                                 actors={actors}
                                 recommendations={recommendations}
                             />

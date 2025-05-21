@@ -137,6 +137,8 @@ const tmdbApi = {
                 data = response.data;
             }
 
+            // console.log("📦 TMDB CONTENT DETAILS:\n", JSON.stringify(data, null, 2));
+
             return data;
         } catch (error) {
             if (error.response?.status === 404) {
@@ -169,6 +171,7 @@ const tmdbApi = {
                     api_key: tmdbApi.apiKey,
                 },
             });
+            // console.log("📦 TMDB CONTENT RELEASE INFO:\n", JSON.stringify(response.data, null, 2));
             return response.data.results || [];
         } catch (error) {
             console.error(`❌ Error fetching release info for ${type} ${id}:`, error.response?.data || error.message);
@@ -221,6 +224,7 @@ const tmdbApi = {
                     api_key: tmdbApi.apiKey,
                 },
             });
+            // console.log("📦 TMDB CREDITS:\n", JSON.stringify(response.data, null, 2));
             return response.data || { cast: [] };
         } catch (error) {
             console.error(`❌ Error fetching credits for ${type} ${id}:`, error.response?.data || error.message);
@@ -249,6 +253,7 @@ const tmdbApi = {
                     language: "vi-VN",
                 },
             });
+            // console.log("📦 TMDB CONTENT RECOMMENDATIONS:\n", JSON.stringify(response.data, null, 2));
             return response.data || { results: [] };
         } catch (error) {
             console.error(`❌ Error fetching recommendations for ${type} ${id}:`, error.response?.data || error.message);

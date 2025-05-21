@@ -1,0 +1,63 @@
+/* Sidebar.css */
+.sidebar {
+  width: 250px;
+  background-color: #2c3e50; /* Dark blue-grey background */
+  color: #ecf0f1; /* Light grey text */
+  height: 100vh; /* Full viewport height */
+  position: fixed; /* Fixed position */
+  top: 0;
+  left: 0;
+  padding-top: 60px; /* Adjust if you have a fixed top navbar */
+  box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+  transition: width 0.3s ease;
+  z-index: 1000; /* Ensure sidebar is on top */
+}
+
+.sidebar-header {
+  padding: 20px;
+  text-align: center;
+  border-bottom: 1px solid #34495e; /* Slightly darker border */
+}
+
+.sidebar-header h3 {
+  margin: 0;
+  color: #ecf0f1;
+  font-size: 1.5em;
+}
+
+.sidebar-nav {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar-nav li .nav-link {
+  display: flex; /* Use flex for icon and text alignment */
+  align-items: center; /* Vertically center icon and text */
+  padding: 15px 20px;
+  color: #bdc3c7; /* Lighter grey for links */
+  text-decoration: none;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  border-left: 3px solid transparent; /* For active indicator */
+}
+
+.sidebar-nav li .nav-link i {
+  margin-right: 10px; /* Space between icon and text */
+  font-size: 1.2em; /* Icon size */
+  width: 20px; /* Fixed width for icon alignment */
+  text-align: center;
+}
+
+.sidebar-nav li .nav-link:hover {
+  background-color: #34495e; /* Darker background on hover */
+  color: #ffffff; /* White text on hover */
+}
+
+.sidebar-nav li .nav-link.active {
+  background-color: #1abc9c; /* Teal for active link */
+  color: #ffffff; /* White text for active link */
+  border-left: 3px solid #16a085; /* Darker teal for active indicator */
+  font-weight: bold;
+}
+
+/* You might need to adjust .main-content in App.css or index.css */

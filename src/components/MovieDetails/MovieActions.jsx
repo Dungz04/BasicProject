@@ -1,11 +1,17 @@
 import React, { useState, useEffect, useRef } from "react";
-import { auth, db } from "../../service/firebase";
+// import { auth, db } from "../../service/firebase";
 import { doc, getDoc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
 import tmdbApi from "../../service/tmdbApi";
+import { useAuth } from "../../context/AuthContext";
+import { toast } from "react-toastify";
+import axios from "axios";
+import authApi from "../../service/authApi";
+import cdnApi from "../../service/cdnApi";
+import Hls from 'hls.js';
 
 const MovieActions = ({ movieId, type }) => {
-    const [user] = useAuthState(auth);
+    const [user, setUser] = useState(null);
     const [isFavorite, setIsFavorite] = useState(false);
     const [playlists, setPlaylists] = useState([]);
     const [showDropdown, setShowDropdown] = useState(false);
@@ -14,13 +20,118 @@ const MovieActions = ({ movieId, type }) => {
     const [showTrailerPopup, setShowTrailerPopup] = useState(false);
     const [trailerLoading, setTrailerLoading] = useState(false);
     const [trailerError, setTrailerError] = useState(null);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const popupRef = useRef(null);
+    const videoRef = useRef(null);
+    const { user: authUser } = useAuth();
 
     const watchUrl = type === "tv"
         ? `/xem-phim/${movieId}/season/1/episode/1?type=tv`
         : `/xem-phim/${movieId}?type=movie`;
+
+    useEffect(() => {
+        if (authUser) {
+            checkMovieStatus();
+        } else {
+            setLoading(false);
+        }
+    }, [authUser, movieId]);
+
+    const checkMovieStatus = async () => {
+        try {
+            const [favoriteRes, playlistRes] =
+                await Promise.all([
+                    axios.get(`${import.meta.env.VITE_API_BASE_URL}/movies/check_favorite?email=${authUser.email}&movieId=${movieId}`
+                        , {
+                            headers: {
+                                Authorization: `Bearer ${authApi.getAccessToken()}`
+                            }
+                        }
+                    ),
+                    axios.get(`${import.meta.env.VITE_API_BASE_URL}/movies/check_favorite?email=${authUser.email}&movieId=${movieId}`
+                        , {
+                            headers: {
+                                Authorization: `Bearer ${authApi.getAccessToken()}`
+                            }
+                        }
+                    )
+                ]);
+            console.log("FAVORITE RES", favoriteRes.data);
+
+            console.log("PLAYLIST RES", playlistRes);
+
+            setIsFavorite(favoriteRes.data);
+            // setIsInPlaylist(playlistRes.data.isInPlaylist);
+        } catch (error) {
+            console.error("Error checking movie status:", error);
+            toast.error("Không thể kiểm tra trạng thái phim");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const toggleFavorite = async () => {
+        if (!authUser) {
+            toast.error("Vui lòng đăng nhập để thêm vào danh sách yêu thích!");
+            return;
+        }
+
+        try {
+            const endpoint = isFavorite ? 'delete_favorite' : 'add_favorite';
+
+            console.log("ENDPOINT", endpoint);
+            if (endpoint === 'delete_favorite') {
+                await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/movies/delete_favorite?email=${authUser.email}&movieId=${movieId}`, {
+                    headers: {
+                        Authorization: `Bearer ${authApi.getAccessToken()}`
+                    }
+                });
+            } else {
+                await axios.post(`${import.meta.env.VITE_API_BASE_URL}/movies/add_favorite?email=${authUser.email}&movieId=${movieId}`, {
+                }, {
+                    headers: {
+                        Authorization: `Bearer ${authApi.getAccessToken()}`
+                    }
+                });
+            }
+            setIsFavorite(!isFavorite);
+
+            toast.success(isFavorite ?
+                "Đã xóa khỏi danh sách yêu thích" :
+                "Đã thêm vào danh sách yêu thích"
+            );
+        } catch (error) {
+            console.error("Error toggling favorite:", error);
+            toast.error("Không thể cập nhật danh sách yêu thích");
+        }
+    };
+
+    const togglePlaylist = async () => {
+        if (!authUser) {
+            toast.error("Vui lòng đăng nhập để thêm vào playlist!");
+            return;
+        }
+
+        try {
+            const endpoint = isInPlaylist ? 'remove' : 'add';
+            await axios.post(`/api/playlist/${endpoint}`, {
+                movieId,
+                mediaType: type,
+                title: document.title,
+                posterPath: document.querySelector('meta[name="poster_path"]')?.content
+            });
+
+            setIsInPlaylist(!isInPlaylist);
+            toast.success(isInPlaylist ?
+                "Đã xóa khỏi playlist" :
+                "Đã thêm vào playlist"
+            );
+        } catch (error) {
+            console.error("Error toggling playlist:", error);
+            toast.error("Không thể cập nhật playlist");
+        }
+    };
 
     useEffect(() => {
         if (!user) {
@@ -81,101 +192,85 @@ const MovieActions = ({ movieId, type }) => {
         fetchData();
     }, [user, movieId, type]);
 
-    const handleToggleFavorite = async () => {
-        if (!user) {
-            alert("Vui lòng đăng nhập để thêm vào yêu thích!");
-            return;
-        }
-
-        const userDocRef = doc(db, "users", user.uid);
-        const movieData = { movieId: parseInt(movieId, 10), type };
-
-        const previousState = isFavorite;
-        setIsFavorite(!previousState);
-
+    const handleOpenTrailer = async () => {
+        setTrailerLoading(true);
+        setTrailerError(null);
         try {
-            if (previousState) {
-                await updateDoc(userDocRef, { favorites: arrayRemove(movieData) });
-            } else {
-                await updateDoc(userDocRef, { favorites: arrayUnion(movieData) });
+            const contentDetails = await cdnApi.getContentDetails(movieId);
+
+            if (!contentDetails?.trailerUrl) {
+                throw new Error('Không tìm thấy trailer cho nội dung này');
             }
-        } catch (err) {
-            console.error("Lỗi cập nhật yêu thích:", err);
-            setError("Không thể cập nhật danh sách yêu thích.");
-            setIsFavorite(previousState);
-        }
-    };
 
-    const handleAddToPlaylist = async (playlistId) => {
-        if (!user) {
-            alert("Vui lòng đăng nhập để thêm vào playlist!");
-            return;
-        }
+            const trailerAsset = await cdnApi.getAssets(contentDetails.trailerUrl, "trailer");
+            if (!trailerAsset?.url) {
+                throw new Error('Không thể tải trailer');
+            }
 
-        setLoading(true);
-        setError(null);
-        const userDocRef = doc(db, "users", user.uid);
-        const movieData = { movieId: parseInt(movieId, 10), type };
+            setShowTrailerPopup(true);
 
-        try {
-            const updatedPlaylists = playlists.map((playlist) =>
-                playlist.id === playlistId
-                    ? { ...playlist, movies: [...(playlist.movies || []), movieData] }
-                    : playlist
-            );
-            await updateDoc(userDocRef, { playlists: updatedPlaylists });
-            setPlaylists(updatedPlaylists);
-            setShowDropdown(false);
-        } catch (err) {
-            console.error("Lỗi thêm vào playlist:", err);
-            setError("Không thể thêm vào playlist.");
+            // Initialize video player after popup is shown
+            setTimeout(() => {
+                initializeVideoPlayer(trailerAsset.url);
+            }, 100);
+
+        } catch (error) {
+            console.error('Lỗi tải trailer:', error);
+            setTrailerError(error.message || 'Không thể tải trailer');
+            toast.error(error.message || 'Không thể tải trailer');
         } finally {
-            setLoading(false);
+            setTrailerLoading(false);
         }
     };
 
-    const handleCreatePlaylist = async () => {
-        if (!user) {
-            alert("Vui lòng đăng nhập để tạo playlist!");
-            return;
-        }
+    const initializeVideoPlayer = (videoUrl) => {
+        if (!videoRef.current) return;
 
-        if (!newPlaylistName.trim()) {
-            setError("Tên playlist không được để trống.");
-            return;
-        }
+        if (Hls.isSupported()) {
+            const hls = new Hls({
+                debug: false,
+                enableWorker: true,
+                lowLatencyMode: true,
+            });
 
-        setLoading(true);
-        setError(null);
-        const userDocRef = doc(db, "users", user.uid);
-        const newPlaylist = {
-            id: Date.now().toString(),
-            name: newPlaylistName,
-            movies: [{ movieId: parseInt(movieId, 10), type }],
-        };
+            hls.loadSource(videoUrl);
+            hls.attachMedia(videoRef.current);
+            hls.on(Hls.Events.ERROR, function (event, data) {
+                console.error('HLS error:', data);
+                if (data.fatal) {
+                    setTrailerError('Lỗi tải video: ' + data.type);
+                    if (hls) {
+                        hls.destroy();
+                    }
+                }
+            });
 
-        try {
-            await updateDoc(userDocRef, { playlists: arrayUnion(newPlaylist) });
-            setPlaylists([...playlists, newPlaylist]);
-            setNewPlaylistName("");
-            setShowDropdown(false);
-        } catch (err) {
-            console.error("Lỗi tạo playlist:", err);
-            setError("Không thể tạo playlist.");
-        } finally {
-            setLoading(false);
+            // Store hls instance for cleanup
+            videoRef.current.hlsInstance = hls;
+        } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
+            videoRef.current.src = videoUrl;
+            videoRef.current.addEventListener('loadedmetadata', () => {
+                videoRef.current.play().catch(error => {
+                    console.error('Auto-play failed:', error);
+                    setTrailerError('Không thể tự động phát video');
+                });
+            });
+        } else {
+            setTrailerError('Trình duyệt không hỗ trợ HLS');
         }
-    };
-
-    const handleOpenTrailer = () => {
-        if (!trailerUrl) {
-            setError(trailerError || "Không tìm thấy trailer cho nội dung này.");
-            return;
-        }
-        setShowTrailerPopup(true);
     };
 
     const handleCloseTrailer = () => {
+        // Cleanup video player
+        if (videoRef.current) {
+            if (videoRef.current.hlsInstance) {
+                videoRef.current.hlsInstance.destroy();
+                delete videoRef.current.hlsInstance;
+            }
+            videoRef.current.pause();
+            videoRef.current.removeAttribute('src');
+            videoRef.current.load();
+        }
         setShowTrailerPopup(false);
     };
 
@@ -197,6 +292,10 @@ const MovieActions = ({ movieId, type }) => {
         return () => document.removeEventListener("keydown", handleKeyDown);
     }, [showTrailerPopup]);
 
+    if (loading) {
+        return <div>Loading...</div>;
+    }
+
     return (
         <div className="flex items-center justify-start !p-4 rounded-lg gap-4 flex-wrap !mt-4">
             <div className="flex items-center gap-4 flex-grow flex-wrap">
@@ -211,8 +310,7 @@ const MovieActions = ({ movieId, type }) => {
                 {/* Nút trailer */}
                 <button
                     onClick={handleOpenTrailer}
-                    disabled={!trailerUrl || trailerLoading}
-                    className={`flex items-center justify-center gap-2 cursor-pointer text-base font-bold text-black bg-gradient-to-r from-[#ff9900] to-[#a57f01bb] !py-3 !px-6 rounded-full transition-all duration-300 hover:shadow-[0_0_15px_rgba(255,153,0,0.7),0_0_25px_rgba(255,153,0,0.5)] min-h-[3rem] ${(!trailerUrl || trailerLoading) ? "opacity-50 cursor-not-allowed" : ""}`}
+                    className={`flex items-center justify-center gap-2 cursor-pointer text-base font-bold text-black bg-gradient-to-r from-[#ff9900] to-[#a57f01bb] !py-3 !px-6 rounded-full transition-all duration-300 hover:shadow-[0_0_15px_rgba(255,153,0,0.7),0_0_25px_rgba(255,153,0,0.5)] min-h-[3rem] ${(!trailerUrl || trailerLoading) ? "" : ""}`}
                 >
                     {trailerLoading ? (
                         <i className="fa-solid fa-spinner animate-spin text-black" />
@@ -227,7 +325,7 @@ const MovieActions = ({ movieId, type }) => {
                     <div className="min-w-[4rem] !p-2 rounded-lg">
                         <div
                             className="flex flex-col items-center justify-center gap-1 text-sm transition-all duration-300 hover:bg-[rgba(255,255,255,0.1)] rounded !p-2 cursor-pointer"
-                            onClick={handleToggleFavorite}
+                            onClick={toggleFavorite}
                         >
                             <div className={`w-5 h-5 ${isFavorite ? "text-[#e50914]" : "text-white"}`}>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -249,7 +347,7 @@ const MovieActions = ({ movieId, type }) => {
                     <div className="relative min-w-[4rem] !p-2 rounded-lg">
                         <div
                             className="flex flex-col items-center justify-center gap-1 text-white text-sm transition-all duration-300 hover:bg-[rgba(255,255,255,0.1)] rounded !p-2 cursor-pointer"
-                            onClick={() => setShowDropdown(!showDropdown)}
+                            onClick={togglePlaylist}
                             disabled={loading}
                         >
                             <div className="w-5 h-5 text-white">
@@ -262,45 +360,6 @@ const MovieActions = ({ movieId, type }) => {
                             </div>
                             <span className="text-white text-xs">Thêm vào</span>
                         </div>
-
-                        {/* Dropdown playlist */}
-                        {showDropdown && (
-                            <div className="absolute top-full left-0 bg-[#222] rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.3)] min-w-[220px] z-[1000] py-2">
-                                {playlists.length > 0 ? (
-                                    playlists.map((playlist) => (
-                                        <div
-                                            key={playlist.id}
-                                            className="!px-4 !py-2 text-white cursor-pointer hover:bg-[#333] transition-colors"
-                                            onClick={() => handleAddToPlaylist(playlist.id)}
-                                        >
-                                            {playlist.name}
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="!px-4 !py-2 text-gray-500 cursor-not-allowed">
-                                        Chưa có playlist
-                                    </div>
-                                )}
-                                <div className="h-px bg-[#444] !my-2"></div>
-                                <div className="flex items-center gap-2 !px-4 !py-2">
-                                    <input
-                                        type="text"
-                                        placeholder="Tên playlist mới"
-                                        value={newPlaylistName}
-                                        onChange={(e) => setNewPlaylistName(e.target.value)}
-                                        disabled={loading}
-                                        className="flex-1 bg-[#333] border-none text-white !py-1.5 !px-2 rounded-md text-sm focus:outline-none"
-                                    />
-                                    <button
-                                        onClick={handleCreatePlaylist}
-                                        disabled={loading || !newPlaylistName.trim()}
-                                        className="bg-[#e50914] text-white border-none !py-1.5 !px-3 rounded-md text-sm disabled:bg-[#666] disabled:cursor-not-allowed"
-                                    >
-                                        Tạo
-                                    </button>
-                                </div>
-                            </div>
-                        )}
                     </div>
                 </div>
             </div>
@@ -316,39 +375,43 @@ const MovieActions = ({ movieId, type }) => {
                 <>
                     {/* Overlay */}
                     <div
-                        className="fixed inset-0 bg-black rounded-3xl bg-opacity-60 z-[9999]"
+                        className="fixed inset-0 bg-black bg-opacity-75 z-[9999]"
                         onClick={handleCloseTrailer}
                     />
 
                     {/* Popup Window */}
                     <div
-                        className="fixed z-[10000]  top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[98%] max-w-[900px] h-auto bg-black border border-gray-800 rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.5)]"
+                        className="fixed z-[10000] top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-[1000px] bg-black rounded-lg shadow-lg overflow-hidden"
                         role="dialog"
                         aria-labelledby="trailer_popup_title"
-                        tabIndex={0}
                         ref={popupRef}
                     >
                         {/* Title Bar */}
-                        <div className="flex justify-between items-center bg-gray-900 text-white !p-2 border-b border-gray-800">
-                            <span id="trailer_popup_title">Play Trailer</span>
+                        <div className="flex justify-between items-center bg-[#111] text-white p-4">
+                            <h3 id="trailer_popup_title" className="text-xl font-semibold">Xem Trailer</h3>
                             <button
                                 onClick={handleCloseTrailer}
-                                className="cursor-pointer bg-[#e50914] text-white rounded-full w-8 h-8 flex items-center justify-center z-10 hover:bg-[#b20710] transition-colors"
+                                className="text-white hover:text-red-500 transition-colors"
                                 aria-label="Đóng trailer"
                             >
-                                <i className="fa-solid fa-times" />
+                                <i className="fas fa-times text-2xl" />
                             </button>
                         </div>
 
-                        {/* Video Content */}
-                        <div className="relative w-full" style={{ paddingBottom: "66.25%" }}>
-                            <iframe
-                                className="absolute top-0 left-0 w-full h-full border-0"
-                                src={trailerUrl}
-                                title="Movie Trailer"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                allowFullScreen
-                            />
+                        {/* Video Container */}
+                        <div className="relative aspect-video bg-black">
+                            {trailerError ? (
+                                <div className="absolute inset-0 flex items-center justify-center text-red-500">
+                                    <p>{trailerError}</p>
+                                </div>
+                            ) : (
+                                <video
+                                    ref={videoRef}
+                                    controls
+                                    className="w-full h-full"
+                                    autoPlay
+                                />
+                            )}
                         </div>
                     </div>
                 </>
