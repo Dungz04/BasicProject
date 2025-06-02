@@ -137,7 +137,7 @@ const Register = () => {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-red-600 text-white !py-2 rounded hover:bg-red-700 transition-colors disabled:bg-red-800 disabled:cursor-not-allowed"
+                        className="w-full bg-red-600 text-white !py-2 rounded hover:bg-red-700 transition-colors disabled:bg-red-800 disabled:cursor-not-allowed !mt-2 cursor-pointer"
                     >
                         {loading ? 'Đang đăng ký...' : 'Đăng ký'}
                     </button>
@@ -145,7 +145,7 @@ const Register = () => {
                 <p className="text-gray-400 text-center !mt-4">
                     Đã có tài khoản?{' '}
                     <Link to="/login" className="text-red-500 hover:text-red-400">
-                        Đăng nhập
+                        Đăng nhập 
                     </Link>
                 </p>
             </div>

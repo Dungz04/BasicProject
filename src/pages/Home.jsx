@@ -1,8 +1,8 @@
 // src/pages/Home.js
 import React from 'react';
-import Banner from '../components/Banner';
-import Top10 from '../components/Top10Movies';
-import MovieTheater from '../components/MovieTheater';
+import Banner from '../components/Homepage/Banner';
+import Top10 from '../components/Homepage/Top10Movies';
+import MovieTheater from '../components/Homepage/MovieTheater';
 
 const Home = () => {
     return (

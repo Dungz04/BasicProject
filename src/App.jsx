@@ -5,15 +5,15 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import SearchPage from './pages/SearchPage';
 import NewMovies from './pages/NewMovies';
-import TVShows from './pages/TVShows';
-import SingleMovie from './pages/SingleMovie';
+import GoodMovies from './pages/GoodMovies';
+
 import MovieDetail from './pages/MovieDetail';
 import User from './pages/User';
 import Login from './components/Account/Login';
 import Register from './components/Account/Register';
 import Home from './pages/Home';
 import WatchPage from './pages/WatchPage';
-import ForgotPassword from './components/Account/ForgotPassword';
+import ForgotPassword from './components/Account/ForgotPassword'; 
 
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -41,11 +41,10 @@ const AppLayout = () => {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path='/forgot-password' element={<ForgotPassword />} />
-            <Route path="/phim/:movieId" element={<MovieDetail />} />
+            <Route path="/movie/:movieId" element={<MovieDetail />} />
             <Route path="/search" element={<SearchPage />} />
-            <Route path="/phim-moi" element={<NewMovies />} />
-            <Route path="/tv-shows" element={<TVShows />} />
-            <Route path="/phim-le" element={<SingleMovie />} />
+            <Route path="/new-movies" element={<NewMovies />} />
+            <Route path="/good-movies" element={<GoodMovies />} />
             <Route path="/user" element={<User activeTab={activeTab} setActiveTab={setActiveTab} />} />
             <Route path="/xem-phim/:movieId" element={<WatchPage />} />
             <Route path="/xem-phim/:movieId/season/:season/episode/:episode" element={<WatchPage />} />

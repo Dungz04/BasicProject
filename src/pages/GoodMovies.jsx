@@ -3,29 +3,29 @@ import React, { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { getAllMovies } from '../service/api';
 
-const NewMovies = () => {
+const GoodMovies = () => {
     const [movies, setMovies] = useState([]);
     const [moviePage, setMoviePage] = useState(1);
     const [movieTotalPages, setMovieTotalPages] = useState(1);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // Số lượng phim mỗi trang
     const moviesPerPage = 20; // Số phim mỗi trang
 
-    // Hàm để lấy danh sách phim mới
+    // Hàm để lấy danh sách phim lẻ có rating > 6.5
     useEffect(() => {
-        const fetchNewMovies = async () => {
+        const fetchMovies = async () => {
             setLoading(true);
             try {
                 const movieData = await getAllMovies();
-                const upcomingMovies = movieData.filter(movie => movie.status === 'UPCOMING');
+                // Lọc phim có rating > 6.5
+                const highRatedMovies = movieData.filter(movie => movie.rating > 6.5);
                 // Chuẩn hóa dữ liệu
-                const formattedMovies = upcomingMovies.map(movie => ({
+                const formattedMovies = highRatedMovies.map(movie => ({
                     id: movie.movieId,
                     title: movie.title,
                     poster_path: movie.imageUrl ? `${import.meta.env.VITE_CDN_URL}/${movie.imageUrl}` : "https://via.placeholder.com/300x450?text=No+Image",
-                    
+                    vote_average: movie.rating || 0,
                 }));
                 // Tính tổng số trang
                 const totalPages = Math.ceil(formattedMovies.length / moviesPerPage);
@@ -40,8 +40,7 @@ const NewMovies = () => {
                 setLoading(false);
             }
         };
-
-        fetchNewMovies();
+        fetchMovies();
     }, [moviePage]);
 
     // Hàm để xử lý thay đổi trang
@@ -64,7 +63,7 @@ const NewMovies = () => {
                 <button
                     key={i}
                     onClick={() => handlePageChange(i)}
-                    className={`!px-4 !py-2 rounded ${
+                    className={`px-4 py-2 rounded ${
                         moviePage === i
                             ? 'bg-red-500 text-white cursor-pointer'
                             : 'bg-gray-700 text-white hover:bg-red-500 cursor-pointer'
@@ -75,7 +74,7 @@ const NewMovies = () => {
             );
         }
 
-        // Xử lý trường hợp không đủ trang để hiển thị
+        // Nếu có trang trước trang đầu tiên, hiển thị nút "1" và dấu "..."
         return (
             <div className="flex justify-center mt-8 gap-2">
                 <button
@@ -127,10 +126,10 @@ const NewMovies = () => {
         );
     };
 
-    
+    // Hiển thị giao diện
     return (
-        <div className="min-h-screen !pb-2 !pt-24 !px-4 sm:px-6 md:px-8 bg-[#141414] text-white">
-            <h1 className="text-2xl font-bold !mb-6">Phim Mới Sắp Ra Mắt</h1>
+        <div className="min-h-screen !pb-2 !pt-24 !px-4 sm:px-6 md:px-8 bg-[#141414] text-white font-lexend">
+            <h1 className="text-2xl font-bold !mb-6">Phim Hay</h1>
 
             {error ? (
                 <p className="text-white/80 text-base !mt-4">{error}</p>
@@ -139,7 +138,7 @@ const NewMovies = () => {
             ) : movies.length > 0 ? (
                 <>
                     <p className="text-white/80 text-sm !mb-4">
-                        Hiển thị {movies.length} phim mới 
+                        Phim hay bạn sẽ thích
                     </p>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                         {movies.map((movie) => (
@@ -159,7 +158,9 @@ const NewMovies = () => {
                                         <h3 className="text-sm font-semibold text-white line-clamp-2 hover:text-red-500 transition duration-300">
                                             {movie.title}
                                         </h3>
-                                        
+                                        <p className="text-xs text-white/80 !mt-1">
+                                            TMDb: {movie.vote_average.toFixed(1)}
+                                        </p>
                                     </div>
                                 </NavLink>
                             </div>
@@ -170,11 +171,11 @@ const NewMovies = () => {
                 </>
             ) : (
                 <p className="text-white/80 text-base !mt-4">
-                    Không tìm thấy phim mới nào.
+                    Không tìm thấy phim lẻ nào có rating trên 6.5.
                 </p>
             )}
         </div>
     );
 };
 
-export default NewMovies;
+export default GoodMovies;

@@ -22,13 +22,13 @@ const TabsContent = ({ activeTab, setActiveTab, movie, actors, recommendations }
                     >
                         Diễn viên
                     </a>
-                    <a
+                    {/* <a
                         className={`text-white font-bold uppercase !py-3 !px-3 border-b-4 transition-all duration-300 hover:border-red-700 ${activeTab === "recommendations" ? "border-red-700" : "border-transparent"
                             }`}
                         onClick={() => setActiveTab("recommendations")}
                     >
                         Đề xuất
-                    </a>
+                    </a> */}
                 </div>
             </div>
 

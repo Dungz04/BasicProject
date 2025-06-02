@@ -389,16 +389,7 @@ const User = () => {
                                 <FaHeart className="!mr-3 w-5 text-center" />
                                 <span>Yêu thích</span>
                             </button>
-                            <button
-                                onClick={() => setActiveTab("playlist")}
-                                className={`flex items-center !p-3 w-full text-left rounded cursor-pointer ${activeTab === "playlist"
-                                    ? "text-white bg-gray-700"
-                                    : "text-gray-300 hover:text-white hover:bg-gray-700"
-                                    }`}
-                            >
-                                <FaPlus className="!mr-3 w-5 text-center" />
-                                <span>Danh sách</span>
-                            </button>
+
                             <button
                                 onClick={() => setActiveTab("history")}
                                 className={`flex items-center !p-3 w-full text-left rounded cursor-pointer ${activeTab === "history"
@@ -464,9 +455,9 @@ const User = () => {
                                                 className="w-full h-full object-cover"
                                             />
                                         </div>
-                                        <button className="text-sm text-red-500 hover:text-red-700 cursor-pointer">
+                                        {/* <button className="text-sm text-red-500 hover:text-red-700 cursor-pointer">
                                             Đổi ảnh đại diện
-                                        </button>
+                                        </button> */}
                                     </div>
                                     <form onSubmit={handleProfileUpdate} className="flex-1">
                                         <div className="!mb-6">
@@ -559,12 +550,12 @@ const User = () => {
                                                 Cập nhật
                                             </button>
                                         </div>
-                                        <p className="!mt-8 text-gray-600">
+                                        {/* <p className="!mt-8 text-gray-600">
                                             Đổi mật khẩu, nhấn vào{" "}
                                             <a href="#" className="text-red-500 hover:text-red-700">
                                                 đây
                                             </a>
-                                        </p>
+                                        </p> */}
                                     </form>
                                 </div>
                             </div>
@@ -616,7 +607,13 @@ const User = () => {
                                                             Không có ảnh
                                                         </div>
                                                     )}
-                                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md flex items-center justify-center">
+                                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md flex items-center justify-center gap-2">
+                                                        <button
+                                                            onClick={() => navigate(`/movie/${item.movieId}`)}
+                                                            className="!px-3 !py-2 bg-blue-600 text-white rounded-full text-sm hover:bg-blue-700 transition cursor-pointer"
+                                                        >
+                                                            Chi tiết
+                                                        </button>
                                                         <button
                                                             onClick={() => handleRemoveFavorite(item)}
                                                             disabled={loading}
@@ -643,93 +640,7 @@ const User = () => {
                     )}
 
                     {/* Tab Danh sách */}
-                    {activeTab === "playlist" && (
-                        <div className="bg-white rounded-lg shadow overflow-hidden">
-                            <div className="!p-6 border-b border-gray-200">
-                                <h1 className="text-xl font-semibold !mb-2">Danh Sách</h1>
-                                <p className="text-gray-600">Danh sách phim bạn đã tạo</p>
-                            </div>
-                            <div className="!p-6">
-                                {loading && <p className="text-gray-600">Đang tải...</p>}
-                                {error && <p className="text-red-500">{error}</p>}
-                                {playlists.length === 0 && !loading && (
-                                    <div className="text-center !py-10">
-                                        <i className="fa-solid fa-list-ul text-red-500 text-5xl !mb-4"></i>
-                                        <p className="text-gray-600 text-lg">
-                                            Chưa có danh sách nào. Tạo danh sách mới trong trang chi tiết phim!
-                                        </p>
-                                        <button
-                                            onClick={() => navigate("/")}
-                                            className="!mt-4 !px-6 !py-2 bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 text-white font-semibold rounded-md shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer"
-                                        >
-                                            Khám phá phim
-                                        </button>
-                                    </div>
-                                )}
-                                {playlists.map((playlist) => (
-                                    <div key={playlist.id} className="!mb-8">
-                                        <div className="flex items-center justify-between !mb-4">
-                                            <h3 className="text-lg font-semibold">{playlist.name}</h3>
-                                            <button
-                                                onClick={() => handleDeletePlaylist(playlist.id)}
-                                                disabled={loading}
-                                                className="!px-3 !py-2 bg-red-600 text-white rounded-full text-sm hover:bg-red-700 transition disabled:bg-gray-500 disabled:cursor-not-allowed cursor-pointer"
-                                            >
-                                                Xóa Playlist
-                                            </button>
-                                        </div>
-                                        {playlist.movies && playlist.movies.length > 0 ? (
-                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                                                {playlist.movies.map((item) => {
-                                                    const key = `${item.movieId}-${item.type}`;
-                                                    const movie = movieDetails[key] || {};
-                                                    return (
-                                                        <div
-                                                            key={key}
-                                                            className="group relative flex flex-col items-center"
-                                                        >
-                                                            {movie.poster ? (
-                                                                <img
-                                                                    src={movie.poster}
-                                                                    alt={movie.title}
-                                                                    className="w-full h-60 object-cover rounded-md transition-all duration-300 group-hover:shadow-xl"
-                                                                />
-                                                            ) : (
-                                                                <div className="w-full h-60 bg-gray-700 flex items-center justify-center rounded-md">
-                                                                    Không có ảnh
-                                                                </div>
-                                                            )}
-                                                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md flex items-center justify-center">
-                                                                <button
-                                                                    onClick={() =>
-                                                                        handleRemoveFromPlaylist(playlist.id, item)
-                                                                    }
-                                                                    disabled={loading}
-                                                                    className="!px-3 !py-2 bg-red-600 text-white rounded-full text-sm hover:bg-red-700 transition disabled:bg-gray-500 disabled:cursor-not-allowed cursor-pointer"
-                                                                >
-                                                                    Xóa
-                                                                </button>
-                                                            </div>
-                                                            <div className="!mt-3 text-center">
-                                                                <p className="text-sm font-semibold text-gray-800 truncate">
-                                                                    {movie.title || "Đang tải..."}
-                                                                </p>
-                                                                <p className="text-xs text-gray-500 !mt-1">
-                                                                    {movie.year || "N/A"} • {movie.type || "Phim"}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        ) : (
-                                            <p className="text-gray-600">Danh sách này chưa có phim.</p>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
+
 
                     {/* Tab Xem tiếp */}
                     {activeTab === "history" && (

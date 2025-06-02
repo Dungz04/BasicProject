@@ -92,30 +92,8 @@ const WatchPage = () => {
                 const rating = contentDetailsJk.rating;
                 setAgeRating(rating);
 
-                const recs = await tmdbApi.getContentRecommendations(movieId, contentType);
-                setRecommendations(recs.results?.slice(0, 3) || []);
-
-                if (contentType === "tv" && season) {
-                    try {
-                        const seasonDetails = await tmdbApi.getTvSeasonDetails(movieId, currentSeason);
-                        if (seasonDetails?.episodes) {
-                            setEpisodes(seasonDetails.episodes);
-                            const selectedEpisode = seasonDetails.episodes.find(
-                                (ep) => ep.episode_number === parseInt(episode)
-                            );
-                            setCurrentEpisode(selectedEpisode || seasonDetails.episodes[0]);
-                        } else {
-                            setEpisodes([]);
-                            setCurrentEpisode(null);
-                            setError("Chưa có thông tin về mùa hoặc tập này.");
-                        }
-                    } catch (seasonErr) {
-                        console.error("Lỗi khi lấy mùa/tập:", seasonErr);
-                        setEpisodes([]);
-                        setCurrentEpisode(null);
-                        setError("Chưa có thông tin về mùa hoặc tập này.");
-                    }
-                }
+                
+                
             } catch (err) {
                 console.error("Lỗi khi lấy dữ liệu:", err);
                 setError(
@@ -412,17 +390,17 @@ const WatchPage = () => {
                                     <div className="relative inline-block">
                                         <button
                                             onClick={() => setIsQualityMenuOpen(!isQualityMenuOpen)}
-                                            className="text-white p-2 bg-black bg-opacity-60 rounded-full hover:bg-opacity-80 transition-opacity focus:outline-none"
+                                            className="text-white !p-2 bg-black bg-opacity-60 rounded-full hover:bg-opacity-80 transition-opacity focus:outline-none"
                                             title="Cài đặt chất lượng"
                                         >
                                             <FontAwesomeIcon icon={faCog} size="xl" /> {/* Increased size */}
                                         </button>
                                         {isQualityMenuOpen && (
-                                            <div className="absolute bottom-full right-0 mb-2 w-36 bg-black bg-opacity-80 p-2 rounded shadow-lg">
-                                                <div className="text-white text-sm mb-1 border-b border-gray-600 pb-1">Chất lượng</div>
+                                            <div className="absolute bottom-full right-0 !mb-2 w-36 bg-black bg-opacity-80 !p-2 rounded shadow-lg">
+                                                <div className="text-white text-sm !mb-1 border-b border-gray-600 !pb-1">Chất lượng</div>
                                                 <button
                                                     onClick={() => handleQualityChange(-1)}
-                                                    className={`block w-full text-left px-2 py-1 text-xs rounded ${selectedQuality === -1 || hlsRef.current?.autoLevelEnabled ? 'bg-red-600' : 'hover:bg-gray-700'} text-white mb-1`}
+                                                    className={`block w-full text-left !px-2 !py-1 text-xs rounded ${selectedQuality === -1 || hlsRef.current?.autoLevelEnabled ? 'bg-red-600' : 'hover:bg-gray-700'} text-white mb-1`}
                                                 >
                                                     Tự động {selectedQuality === -1 || hlsRef.current?.autoLevelEnabled ? `(${qualityLevels.find(q => q.index === hlsRef.current?.currentLevel)?.height}p)` : ''}
                                                 </button>
@@ -430,9 +408,9 @@ const WatchPage = () => {
                                                     <button
                                                         key={level.index}
                                                         onClick={() => handleQualityChange(level.index)}
-                                                        className={`block w-full text-left px-2 py-1 text-xs rounded ${selectedQuality === level.index && !hlsRef.current?.autoLevelEnabled ? 'bg-red-600' : 'hover:bg-gray-700'} text-white mb-0.5 last:mb-0`}
+                                                        className={`block w-full text-left !px-2 !py-1 text-xs rounded ${selectedQuality === level.index && !hlsRef.current?.autoLevelEnabled ? 'bg-red-600' : 'hover:bg-gray-700'} text-white mb-0.5 last:mb-0`}
                                                     >
-                                                        {level.height}p
+                                                        {level.height}
                                                     </button>
                                                 ))}
                                             </div>
@@ -505,13 +483,14 @@ const WatchPage = () => {
                                     {contentJk.overviewString || "Không có mô tả."}
                                 </p>
                                 <button
-                                    onClick={() => navigate(`/phim/${movieId}?type=${type}`)}
+                                    onClick={() => navigate(`/movie/${movieId}`)}
                                     className="flex items-center gap-1 text-[#e50914] text-[14px] cursor-pointer hover:text-white transition-colors duration-200 !mt-2.5"
                                 >
                                     Thông tin phim &gt;
                                 </button>
                             </div>
                         </div>
+                        
                         <div className="w-full h-[1px] bg-[#aaaaaa62] my-[1em] xl:block hidden"></div>
 
                         {/* Phim lẻ - Bản chiếu (chỉ phụ đề) */}
@@ -553,68 +532,7 @@ const WatchPage = () => {
                         )}
 
                         {/* Phim bộ - Danh sách tập */}
-                        {type === "tv" && episodes.length > 0 && (
-                            <div className="!mb-6">
-                                <div className="flex items-center justify-between !mb-4 !ml-2">
-
-                                    <div className="relative">
-                                        {/* Hàng ngang chứa tiêu đề + thanh dọc + nút chọn phần */}
-                                        <div className="flex items-center gap-4 !mb-2">
-                                            {/* Tiêu đề */}
-                                            <h3 className="text-xl font-bold text-white !mt-2 border border-[#ffffff] rounded-[5px] !px-4 !py-1">Danh sách tập</h3>
-
-                                            {/* Thanh dọc ngăn cách */}
-                                            <div className="w-[1px] h-9 bg-white opacity-20 !mt-2"></div>
-
-                                            <div className="relative group">
-                                                {/* Nút chọn phần */}
-                                                <button
-                                                    className="flex items-center cursor-pointer !space-x-2 !px-4 !py-2 !mt-2 bg-[#282B3A] rounded-lg hover:bg-[#e50914] hover:!text-black transition-colors"
-                                                >
-                                                    <span>Phần {currentSeason}</span>
-                                                    <FontAwesomeIcon icon={faCaretDown} />
-                                                </button>
-
-                                                {/* Dropdown xuất hiện khi hover */}
-                                                <div className="absolute top-full !w-25.5 hidden group-hover:block !px-4 !py-2 bg-[#282B3A]  rounded-lg shadow-lg z-10">
-                                                    {Array.from({ length: content.number_of_seasons || 1 }, (_, i) => i + 1).map((seasonNum) => (
-                                                        <button
-                                                            key={seasonNum}
-                                                            onClick={() => handleSeasonChange(seasonNum)}
-                                                            className="block w-full  !px-2 !py-2 rounded-[5px] cursor-pointer  hover:text-[#e50914] transition-colors"
-                                                        >
-                                                            Phần {seasonNum}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-
-                                        </div>
-
-                                    </div>
-
-                                </div>
-
-                                <div className="grid lg:grid-cols-8 md:grid-cols-6 sm:grid-cols-4 grid-cols-2 gap-3">
-                                    {episodes.map((ep) => (
-                                        <button
-                                            key={ep.id}
-                                            className={`flex items-center justify-center gap-2 cursor-pointer w-full h-[50px] rounded-md text-white text-[14px] group  ${currentEpisode?.episode_number === ep.episode_number
-                                                ? "bg-[#e50914]"
-                                                : "bg-[#282B3A]"
-                                                }`}
-                                            onClick={() => handleEpisodeClick(ep)}
-                                        >
-                                            <FontAwesomeIcon
-                                                icon={faPlay}
-                                                className="text-[15px] text-white group-hover:text-[#e50914]"
-                                            />
-                                            Tập {ep.episode_number}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
+                        
                     </div>
                 </div>
 
@@ -654,44 +572,8 @@ const WatchPage = () => {
                         <div className="w-full h-[1px] bg-[#aaaaaa28] !mt-2"></div>
 
                         {/* gợi ý phim */}
-                        {recommendations.length > 0 && (
-                            <>
-                                <p className="text-center text-[30px] text-white !mt-2 !mb-4">
-                                    Có thể bạn muốn xem
-                                </p>
-                                <div className="space-y-4 px-4">
-                                    {recommendations.map((item) => (
-                                        <div
-                                            key={item.id}
-                                            className="flex items-start gap-4 cursor-pointer hover:bg-[#1f2028b2] p-3 rounded-lg transition-colors"
-                                            onClick={() =>
-                                                navigate(`/phim/${item.id}?type=${item.media_type || type}`)
-                                            }
-                                        >
-                                            <img
-                                                src={
-                                                    item.poster_path
-                                                        ? `https://image.tmdb.org/t/p/w200${item.poster_path}`
-                                                        : "/images/no-poster.jpg"
-                                                }
-                                                alt={item.title || item.name}
-                                                className="w-[100px] object-cover rounded-lg transform transition-transform duration-300 hover:scale-105 hover:shadow-lg !mb-1.25"
-                                            />
-                                            <div>
-                                                <p className="font-medium text-white hover:text-[#e50914]">
-                                                    {item.title || item.name}
-                                                </p>
-                                                <p className="text-sm text-gray-400 mt-1">
-                                                    {item.release_date?.substring(0, 4) ||
-                                                        item.first_air_date?.substring(0, 4)}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="w-full h-[1px] bg-[#aaaaaa28] my-[1em]"></div>
-                            </>
-                        )}
+                        
+                        
                     </div>
                 </div>
             </div>

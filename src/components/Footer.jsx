@@ -10,7 +10,7 @@ const Footer = () => {
                 <div>
                     <h3 className="text-lg font-semibold !mb-3">Về DuztMovie</h3>
                     <p className="text-sm text-gray-400">
-                        Trang web xem phim miễn phí với hàng ngàn bộ phim chất lượng cao, cập nhật liên tục.
+                        Trang web xem phim miễn phí với nhiều bộ phim chất lượng cao, cập nhật liên tục.
                     </p>
                 </div>
 
@@ -18,10 +18,10 @@ const Footer = () => {
                 <div>
                     <h3 className="text-lg font-semibold !mb-3 text-center">Liên kết</h3>
                     <ul className="!space-y-2 text-sm text-gray-300 text-center">
-                        <li><Link to="" className="hover:text-white transition">Điều khoản sử dụng</Link></li>
-                        <li><Link to="" className="hover:text-white transition">Chính sách bảo mật</Link></li>
-                        <li><Link to="" className="hover:text-white transition">Liên hệ</Link></li>
-                        <li><Link to="" className="hover:text-white transition">Trợ giúp</Link></li>
+                        <li><span to="" className="hover:text-white transition">Điều khoản sử dụng</span></li>
+                        <li><span to="" className="hover:text-white transition">Chính sách bảo mật</span></li>
+                        <li><span to="" className="hover:text-white transition">Liên hệ</span></li>
+                        <li><span to="" className="hover:text-white transition">Trợ giúp</span></li>
                     </ul>
                 </div>
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, NavLink, useSearchParams } from 'react-router-dom';
-import tmdbApi from '../service/tmdbApi';
+import { getAllMovies } from '../service/api';
 
 const SearchPage = () => {
     const [searchResults, setSearchResults] = useState([]);
@@ -12,6 +12,7 @@ const SearchPage = () => {
 
     const query = searchParams.get('query') || '';
     const page = parseInt(searchParams.get('page') || '1', 10);
+    const moviesPerPage = 20; // Số phim mỗi trang
 
     useEffect(() => {
         const fetchSearchResults = async () => {
@@ -26,10 +27,25 @@ const SearchPage = () => {
             setLoading(true);
             setError(null);
             try {
-                const response = await tmdbApi.searchContent(query, 'multi', page);
-                setSearchResults(response.results || []);
-                setTotalPages(Math.min(response.total_pages || 1, 500)); // Giới hạn 500 trang theo TMDB
-                setTotalResults(response.total_results || 0);
+                const movieData = await getAllMovies();
+                // Lọc phim theo query
+                const filteredMovies = movieData.filter((movie) =>
+                    movie.title.toLowerCase().includes(query.toLowerCase())
+                );
+                // Chuẩn hóa dữ liệu
+                const formattedMovies = filteredMovies.map((movie) => ({
+                    id: movie.movieId,
+                    title: movie.title,
+                    poster_path: movie.imageUrl ? `${import.meta.env.VITE_CDN_URL}/${movie.imageUrl}` : "https://via.placeholder.com/300x450?text=No+Image",
+
+                }));
+                // Tính tổng số kết quả và trang
+                setTotalResults(formattedMovies.length);
+                setTotalPages(Math.ceil(formattedMovies.length / moviesPerPage) || 1);
+                // Lấy phim cho trang hiện tại
+                const startIndex = (page - 1) * moviesPerPage;
+                const endIndex = startIndex + moviesPerPage;
+                setSearchResults(formattedMovies.slice(startIndex, endIndex));
             } catch (error) {
                 console.error('Lỗi khi tải kết quả tìm kiếm:', error);
                 setError('Không thể tải kết quả tìm kiếm. Vui lòng thử lại sau.');
@@ -44,7 +60,7 @@ const SearchPage = () => {
     const handlePageChange = (newPage) => {
         if (newPage >= 1 && newPage <= totalPages) {
             setSearchParams({ query, page: newPage.toString() });
-            window.scrollTo({ top: 0, behavior: 'smooth' }); // Cuộn lên đầu trang
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     };
 
@@ -118,9 +134,8 @@ const SearchPage = () => {
         );
     };
 
-
     return (
-        <div className="min-h-screen !pb-2 !pt-24 !px-4 sm:px-6 md:px-8 bg-[#141414] text-white">
+        <div className="min-h-screen !pb-2 !pt-24 !px-4 sm:px-6 md:px-8 bg-[#141414] text-white font-lexend">
             <h1 className="text-2xl font-bold !mb-6">
                 Kết quả tìm kiếm cho: <span className="text-red-500">"{query}"</span>
             </h1>
@@ -138,26 +153,20 @@ const SearchPage = () => {
                         {searchResults.map((item) => (
                             <div
                                 key={item.id}
-                                className="bg-[#1f1f1f] rounded-lg overflow-hidden hover:scale-105 transition-transform duration-300"
+                                className="bg-[#1f1f1f] rounded-lg overflow-hidden transition-transform duration-300"
                             >
-                                <NavLink to={`/phim/${item.id}?type=${item.media_type}`}>
+                                <NavLink to={`/movie/${item.id}`}>
                                     <div className="relative">
-                                        {(item.media_type === 'movie' || item.media_type === 'tv') && (
-                                            <span
-                                                className="absolute text-xs font-semibold !px-2 !py-1 rounded bg-red-500 text-white shadow-md"
-                                            >
-                                                {item.media_type === 'movie' ? 'Phim lẻ' : 'Phim bộ'}
-                                            </span>
-                                        )}
+                                        
                                         <img
-                                            src={`https://image.tmdb.org/t/p/w300${item.poster_path}`}
-                                            alt={item.title || item.name}
+                                            src={item.poster_path}
+                                            alt={item.title}
                                             className="w-full h-auto object-cover rounded-t-lg"
                                         />
                                     </div>
-                                    <div className="p-2 text-center">
+                                    <div className="!p-2 text-center">
                                         <h3 className="text-sm font-semibold text-white line-clamp-2 hover:text-red-500 transition duration-300">
-                                            {item.title || item.name}
+                                            {item.title}
                                         </h3>
                                     </div>
                                 </NavLink>
@@ -169,7 +178,7 @@ const SearchPage = () => {
                 </>
             ) : (
                 <p className="text-white/80 text-base !mt-4">
-                    Không tìm thấy kết quả nào cho "<span className="text-red-500">{query}</span>".
+                    Không tìm thấy kết quả nào cho "<span className="text-red-500">{query}"</span>".
                 </p>
             )}
         </div>

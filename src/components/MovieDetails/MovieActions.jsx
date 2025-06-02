@@ -344,23 +344,7 @@ const MovieActions = ({ movieId, type }) => {
                     </div>
 
                     {/* Nút thêm vào playlist */}
-                    <div className="relative min-w-[4rem] !p-2 rounded-lg">
-                        <div
-                            className="flex flex-col items-center justify-center gap-1 text-white text-sm transition-all duration-300 hover:bg-[rgba(255,255,255,0.1)] rounded !p-2 cursor-pointer"
-                            onClick={togglePlaylist}
-                            disabled={loading}
-                        >
-                            <div className="w-5 h-5 text-white">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 100 100" fill="none">
-                                    <path
-                                        d="M89.7273 41.6365H58.3635V10.2727C58.3635 6.81018 55.5534 4 52.0908 4H47.9092C44.4466 4 41.6365 6.81018 41.6365 10.2727V41.6365H10.2727C6.81018 41.6365 4 44.4466 4 47.9092V52.0908C4 55.5534 6.81018 58.3635 10.2727 58.3635H41.6365V89.7273C41.6365 93.1898 44.4466 96 47.9092 96H52.0908C55.5534 96 58.3635 93.1898 58.3635 89.7273V58.3635H89.7273C93.1898 58.3635 96 55.5534 96 52.0908V47.9092C96 44.4466 93.1898 41.6365 89.7273 41.6365Z"
-                                        fill="currentColor"
-                                    />
-                                </svg>
-                            </div>
-                            <span className="text-white text-xs">Thêm vào</span>
-                        </div>
-                    </div>
+                    
                 </div>
             </div>
 
