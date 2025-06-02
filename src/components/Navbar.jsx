@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import debounce from 'lodash/debounce';
-import tmdbApi from '../service/tmdbApi';
+import { getAllMovies } from '../service/api';
 import logo from '../assets/logo_title.png';
 import { useAuth } from '../context/AuthContext';
 import { FaHeart, FaPlus, FaClockRotateLeft, FaUser, FaRightFromBracket } from 'react-icons/fa6';
@@ -28,6 +28,10 @@ const Navbar = ({ activeTab, setActiveTab }) => {
     const navigate = useNavigate();
     const { user, logout } = useAuth();
 
+    // Tham chiếu đến khu vực tìm kiếm và menu
+    const searchRef = useRef(null);
+    const dropdownRef = useRef(null);
+
     // Đăng xuất
     const handleSignOut = async () => {
         try {
@@ -41,23 +45,21 @@ const Navbar = ({ activeTab, setActiveTab }) => {
         }
     };
 
-    // Lấy gợi ý tìm kiếm từ TMDB
+    // Lấy gợi ý tìm kiếm từ API
     const fetchSuggestions = async (query) => {
         if (!query.trim()) {
             setSuggestions([]);
             return;
         }
         try {
-            const response = await tmdbApi.searchContent(query, 'multi', 1);
-            const results = response.results || [];
-            const filteredSuggestions = results
-                .filter((item) => item.media_type === 'movie' || item.media_type === 'tv')
+            const movieData = await getAllMovies();
+            const filteredSuggestions = movieData
+                .filter((movie) => movie.title.toLowerCase().includes(query.toLowerCase()))
                 .slice(0, 5)
-                .map((item) => ({
-                    id: item.id,
-                    title: item.title || item.name,
-                    media_type: item.media_type,
-                    poster_path: item.poster_path,
+                .map((movie) => ({
+                    id: movie.movieId,
+                    title: movie.title,
+                    poster_path: movie.imageUrl ? `${import.meta.env.VITE_CDN_URL}/${movie.imageUrl}` : null,
                 }));
             setSuggestions(filteredSuggestions);
         } catch (error) {
@@ -83,6 +85,24 @@ const Navbar = ({ activeTab, setActiveTab }) => {
             setIsDropdownOpen(false);
             document.body.style.overflow = 'auto';
         }
+    }, []);
+
+    // Xử lý nhấp chuột ra ngoài để đóng tìm kiếm và menu
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (searchRef.current && !searchRef.current.contains(event.target)) {
+                setSuggestions([]);
+                setIsSearchOpen(false);
+            }
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsDropdownOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
     }, []);
 
     useEffect(() => {
@@ -139,14 +159,13 @@ const Navbar = ({ activeTab, setActiveTab }) => {
         }
     };
 
-    const handleSuggestionClick = (suggestion) => {
+    const handleSuggestionClick = (suggestion, event) => {
+        event.stopPropagation(); // Ngăn lan truyền sự kiện
         setSearchQuery('');
         setSuggestions([]);
         setIsSearchOpen(false);
         if (isMenuOpen) toggleMenu();
-        navigate(`/phim/${suggestion.id}?type=${suggestion.media_type}`, {
-            state: { media_type: suggestion.media_type },
-        });
+        navigate(`/movie/${suggestion.id}`);
     };
 
     const handleTabChange = (tab) => {
@@ -157,9 +176,8 @@ const Navbar = ({ activeTab, setActiveTab }) => {
 
     const navItems = [
         { to: '/', label: <i className="fa-solid fa-house" />, exact: true },
-        { to: '/phim-moi', label: 'Phim mới' },
-        { to: '/phim-le', label: 'Phim lẻ' },
-        { to: '/tv-shows', label: 'TV Shows' },
+        { to: '/new-movies', label: 'Phim mới' },
+        { to: '/good-movies', label: 'Phim hay' },
     ];
 
     // Hiển thị lỗi nếu có
@@ -173,7 +191,7 @@ const Navbar = ({ activeTab, setActiveTab }) => {
 
     return (
         <header
-            className={`fixed !top-0 left-0 w-full z-50 border-b border-white/10 backdrop-blur-sm transition-all duration-300 ease-in-out ${headerClass}`}
+            className={`fixed !top-0 left-0 w-full z-50 border-b border-white/10 backdrop-blur-sm transition-all duration-300 ease-in-out ${headerClass} font-lexend`}
         >
             <div className="flex items-center justify-between w-full max-w-7xl mx-auto !px-4 sm:!px-6 md:!px-8 !mt-2">
                 <div className="flex items-center gap-2">
@@ -207,7 +225,7 @@ const Navbar = ({ activeTab, setActiveTab }) => {
 
                 <div className="flex items-center gap-3">
                     {!isMobile ? (
-                        <div className="relative w-56 group">
+                        <div className="relative w-56 group" ref={searchRef}>
                             <input
                                 type="text"
                                 className="w-full !py-2 !pl-10 !pr-4 text-white bg-white/10 border border-white/30 rounded-full outline-none transition-all duration-300 ease-in-out focus:w-64 focus:bg-white/20 focus:text-gray focus:border-white group-hover:bg-white/20"
@@ -229,11 +247,11 @@ const Navbar = ({ activeTab, setActiveTab }) => {
                                         <li
                                             key={`${suggestion.id}-${idx}`}
                                             className="flex items-center !px-3 !py-3 text-white text-base hover:bg-white/20 cursor-pointer"
-                                            onClick={() => handleSuggestionClick(suggestion)}
+                                            onClick={(e) => handleSuggestionClick(suggestion, e)}
                                         >
                                             {suggestion.poster_path ? (
                                                 <img
-                                                    src={`https://image.tmdb.org/t/p/w92${suggestion.poster_path}`}
+                                                    src={suggestion.poster_path}
                                                     alt={suggestion.title}
                                                     className="w-12 h-18 object-cover rounded-md !mr-4 flex-shrink-0"
                                                 />
@@ -244,9 +262,6 @@ const Navbar = ({ activeTab, setActiveTab }) => {
                                             )}
                                             <div className="overflow-hidden">
                                                 <p className="text-sm font-semibold truncate">{suggestion.title}</p>
-                                                <p className="text-xs text-gray-400">
-                                                    ({suggestion.media_type === 'movie' ? 'Phim lẻ' : 'Phim bộ'})
-                                                </p>
                                             </div>
                                         </li>
                                     ))}
@@ -254,7 +269,7 @@ const Navbar = ({ activeTab, setActiveTab }) => {
                             )}
                         </div>
                     ) : (
-                        <div className="relative flex items-center text-white">
+                        <div className="relative flex items-center text-white" ref={searchRef}>
                             <i className="fa-solid fa-magnifying-glass text-xl cursor-pointer" onClick={toggleSearch}></i>
                             {isSearchOpen && (
                                 <div className="absolute top-full right-0 !mt-2 w-56 group">
@@ -279,11 +294,11 @@ const Navbar = ({ activeTab, setActiveTab }) => {
                                                 <li
                                                     key={`${suggestion.id}-${idx}`}
                                                     className="flex items-center !px-4 !py-2 text-white hover:bg-white/20 cursor-pointer"
-                                                    onClick={() => handleSuggestionClick(suggestion)}
+                                                    onClick={(e) => handleSuggestionClick(suggestion, e)}
                                                 >
                                                     {suggestion.poster_path ? (
                                                         <img
-                                                            src={`https://image.tmdb.org/t/p/w92${suggestion.poster_path}`}
+                                                            src={suggestion.poster_path}
                                                             alt={suggestion.title}
                                                             className="w-10 h-14 object-cover rounded-md !mr-3 flex-shrink-0"
                                                         />
@@ -294,9 +309,6 @@ const Navbar = ({ activeTab, setActiveTab }) => {
                                                     )}
                                                     <div className="overflow-hidden">
                                                         <p className="text-sm font-medium truncate">{suggestion.title}</p>
-                                                        <p className="text-xs text-gray-400">
-                                                            ({suggestion.media_type === 'movie' ? 'Phim lẻ' : 'Phim bộ'})
-                                                        </p>
                                                     </div>
                                                 </li>
                                             ))}
@@ -307,7 +319,7 @@ const Navbar = ({ activeTab, setActiveTab }) => {
                         </div>
                     )}
                     {user ? (
-                        <div className="relative !ml-7">
+                        <div className="relative !ml-7" ref={dropdownRef}>
                             <button
                                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                                 className="relative inline-flex items-center justify-center w-10 h-10 cursor-pointer overflow-hidden bg-gray-600 rounded-full"
@@ -338,15 +350,6 @@ const Navbar = ({ activeTab, setActiveTab }) => {
                                             >
                                                 <FaHeart className="!mr-2" />
                                                 Yêu thích
-                                            </button>
-                                        </li>
-                                        <li>
-                                            <button
-                                                onClick={() => handleTabChange('playlist')}
-                                                className="flex items-center cursor-pointer !px-4 !py-2 hover:bg-gray-600 hover:text-white w-full text-left"
-                                            >
-                                                <FaPlus className="!mr-2" />
-                                                Danh sách
                                             </button>
                                         </li>
                                         <li>

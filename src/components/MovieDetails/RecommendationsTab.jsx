@@ -21,7 +21,7 @@ const RecommendationsTab = ({ recommendations = [], active }) => {
                                     className="bg-[#2a2a2a] rounded-xl overflow-hidden transform transition duration-300 hover:scale-105 hover:shadow-2xl"
                                 >
                                     <a
-                                        href={`/phim/${rec.id}?type=${type}`}
+                                        href={`/movie/${rec.id}?type=${type}`}
                                         className="block group relative"
                                         aria-label={`Xem ${title}`}
                                     >
@@ -39,7 +39,7 @@ const RecommendationsTab = ({ recommendations = [], active }) => {
                                     </a>
                                     <div className="!px-3 !py-2 bg-[#1e1e1e] rounded-b-xl">
                                         <h4 className="text-white text-sm sm:text-base font-medium truncate text-center hover:text-[#e50914] transition-colors">
-                                            <a href={`/phim/${rec.id}?type=${type}`}>{title}</a>
+                                            <a href={`/movie/${rec.id}?type=${type}`}>{title}</a>
                                         </h4>
                                     </div>
                                 </div>

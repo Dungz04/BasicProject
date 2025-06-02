@@ -1,22 +1,22 @@
 import React from "react";
 
-const countryMapping = {
-    US: "United States",
-    JP: "Japan",
-    KR: "South Korea",
-    CN: "China",
-    GB: "United Kingdom",
-    FR: "France",
-    DE: "Germany",
-    IT: "Italy",
-    ES: "Spain",
-    CA: "Canada",
-    AU: "Australia",
-    IN: "India",
-    BR: "Brazil",
-    MX: "Mexico",
-    RU: "Russia",
-};
+// const countryMapping = {
+//     US: "United States",
+//     JP: "Japan",
+//     KR: "South Korea",
+//     CN: "China",
+//     GB: "United Kingdom",
+//     FR: "France",
+//     DE: "Germany",
+//     IT: "Italy",
+//     ES: "Spain",
+//     CA: "Canada",
+//     AU: "Australia",
+//     IN: "India",
+//     BR: "Brazil",
+//     MX: "Mexico",
+//     RU: "Russia",
+// };
 
 const MovieInfo = ({ movie }) => {
     const toggleDetail = () => {
@@ -34,7 +34,7 @@ const MovieInfo = ({ movie }) => {
     const title = movie.title || "Không có tiêu đề";
     const originalTitle = movie.title || title;
     const releaseYear = movie.releaseYear || "N/A";
-    const duration = movie.duration ? `${movie.duration} phút` : "N/A";
+    const duration = movie.duration ? `${movie.duration} minutes` : "N/A";
     const displayCountries = movie.country;
     const genreList = typeof movie.genres === 'string'
         ? movie.genres.split(',').map(genre => ({ name: genre.trim() }))
@@ -65,7 +65,7 @@ const MovieInfo = ({ movie }) => {
                 className="block md:hidden w-full !py-3 !px-4 text-center bg-gradient-to-tr from-red-600 to-red-900 text-white rounded-lg text-lg font-medium cursor-pointer !mb-4 hover:from-red-700 hover:to-red-800 transition-all duration-300"
                 onClick={toggleDetail}
             >
-                <span>Thông tin {"phim"}</span>
+                <span>Thông tin phim</span>
                 <i className="fa-solid fa-angle-down !ml-2 transition-transform duration-300 group-hover:rotate-180" />
             </div>
 
@@ -77,7 +77,7 @@ const MovieInfo = ({ movie }) => {
                     <span className="border border-red-600 rounded-md text-white font-medium text-xs !px-2 !py-1.5 hover:bg-red-600/20 transition">
                         TMDb {movie.rating ? movie.rating.toFixed(1) : "N/A"}
                     </span>
-                    <span className="bg-white text-black font-medium text-sm !px-2 !py-1.5 rounded-md">
+                    <span className="bg-[#e50914] text-white font-medium text-sm !px-2 !py-1.5 rounded-md">
                         {movie.status || "N/A"}
                     </span>
                     <span className="bg-white/10 text-white text-xs !px-2 !py-1.5 rounded-md hover:bg-white/20 transition">
