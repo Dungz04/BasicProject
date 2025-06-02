@@ -94,7 +94,7 @@ const User = () => {
                 const historyWithDetails = await Promise.all(
                     getHistory.data.map(async (item) => {
                         try {
-                            const contentDetails = await cdnApi.getContentDetails(item.videoId);
+                            const contentDetails = await cdnApi.getContentDetails(item.movieId);
                             return {
                                 ...item,
                                 movieDetails: {
@@ -105,7 +105,7 @@ const User = () => {
                                 }
                             };
                         } catch (error) {
-                            console.error(`Error fetching details for video ${item.videoId}:`, error);
+                            console.error(`Error fetching details for video ${item.movieId}:`, error);
                             return {
                                 ...item,
                                 movieDetails: null
@@ -751,7 +751,7 @@ const User = () => {
                                                 {item.movieDetails ? (
                                                     <>
                                                         <a
-                                                            href={`/xem-phim/${item.videoId}?position=${item.position}`}
+                                                            href={`/xem-phim/${item.movieId}?position=${item.position}`}
                                                             className="w-full h-60 relative"
                                                         >
                                                             <img

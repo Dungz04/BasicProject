@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import authApi from '../service/authApi';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 
 const AdminDashboard = () => {
   const [imageFiles, setImageFiles] = useState([]);
@@ -12,6 +15,17 @@ const AdminDashboard = () => {
 
   const [uploadStatus, setUploadStatus] = useState('');
   const [overallProgress, setOverallProgress] = useState(0);
+  
+  const { isAdmin } = useAuth();
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    // Redirect if not admin
+    if (!isAdmin) {
+      toast.error('Bạn không có quyền truy cập trang này!');
+      navigate('/');
+    }
+  }, [isAdmin, navigate]);
 
   const fileTypesConfig = [
     { type: 'image', label: 'Images (jpg, png, gif)', accept: 'image/jpeg,image/png,image/gif', files: imageFiles, setFiles: setImageFiles },
@@ -72,7 +86,7 @@ const AdminDashboard = () => {
 
       console.log('Uploading files...');
 
-      const response = await axios.post(`${process.env.VITE_API_BASE_URL}/upload/media`, formData, {
+      const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/upload/media`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'Authorization': `Bearer ${accessToken}`

@@ -32,7 +32,7 @@ const UploadMovieDTO = () => {
         return;
       }
 
-      const response = await axios.post(`${process.env.VITE_API_BASE_URL}/movies/add-movie`, formData, { 
+      const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/movies/add-movie`, formData, { 
         headers: {
           'Content-Type': 'multipart/form-data', 
           'Authorization': `Bearer ${accessToken}`

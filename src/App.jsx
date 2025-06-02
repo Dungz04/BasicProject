@@ -21,6 +21,8 @@ import { AuthProvider } from './context/AuthContext';
 import AdminDashboard from './components/AdminDashboard';
 import Sidebar from './components/Sidebar';
 import UploadMovieDTO from './components/UploadMovie';
+import MovieManagement from './components/MovieManagement';
+import EditMovie from './components/EditMovie';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 
 const AppLayout = () => {
@@ -51,7 +53,9 @@ const AppLayout = () => {
             {/* Admin Routes */}
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/upload-movie" element={<UploadMovieDTO />} />
-            <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} /> 
+            <Route path="/admin/movies" element={<MovieManagement />} />
+            <Route path="/admin/edit-movie/:movieId" element={<EditMovie />} />
+            <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
 
             <Route path="*" element={<div>404 - Trang không tồn tại</div>} />
           </Routes>

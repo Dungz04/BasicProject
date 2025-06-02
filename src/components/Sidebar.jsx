@@ -1,8 +1,13 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import './Sidebar.css'; // We'll create this CSS file next
+import './Sidebar.css';
+import { useAuth } from '../context/AuthContext';
 
 const Sidebar = () => {
+  const { isAdmin } = useAuth();
+  
+  // Redirect logic is handled in individual admin components
+  
   return (
     <nav className="sidebar">
       <div className="sidebar-header">
@@ -19,7 +24,11 @@ const Sidebar = () => {
             <i className="fas fa-film"></i> Movie & DTO Upload
           </NavLink>
         </li>
-        {/* Add more admin links here as needed */}
+        <li>
+          <NavLink to="/admin/movies" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+            <i className="fas fa-list"></i> Quản lý phim
+          </NavLink>
+        </li>
       </ul>
     </nav>
   );

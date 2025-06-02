@@ -5,6 +5,7 @@ import axios from 'axios';
 
 const Register = () => {
     const [name, setName] = useState('');
+    const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -22,8 +23,9 @@ const Register = () => {
         setLoading(true);
 
         try {
-            const response = await axios.post('/api/auth/register', {
+            const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/auth/register`, {
                 name,
+                username,
                 email,
                 password
             });
@@ -33,7 +35,6 @@ const Register = () => {
             } else {
                 toast.success('Đăng ký thành công!');
             }
-
             navigate('/login');
         } catch (error) {
             console.error('Lỗi đăng ký:', error);
@@ -45,7 +46,10 @@ const Register = () => {
                         errorMessage += 'Thông tin không hợp lệ!';
                         break;
                     case 409:
-                        errorMessage += 'Email đã được sử dụng!';
+                        errorMessage += 'Email hoặc UserName đã được sử dụng!';
+                        break;
+                    case 403 :
+                        errorMessage += error.response.data.error;
                         break;
                     default:
                         errorMessage += error.response.data.message || 'Vui lòng thử lại sau.';
@@ -74,6 +78,19 @@ const Register = () => {
                             id="name"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
+                            className="w-full !px-4 !py-2 bg-[#333] text-white border border-gray-600 rounded focus:outline-none focus:border-red-500"
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label htmlFor="username" className="block text-gray-300 !mb-1">
+                            User Name
+                        </label>
+                        <input
+                            type="text"
+                            id="username"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
                             className="w-full !px-4 !py-2 bg-[#333] text-white border border-gray-600 rounded focus:outline-none focus:border-red-500"
                             required
                         />
