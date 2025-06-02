@@ -299,12 +299,14 @@ const MovieActions = ({ movieId, type }) => {
     return (
         <div className="flex items-center justify-start !p-4 rounded-lg gap-4 flex-wrap !mt-4">
             <div className="flex items-center gap-4 flex-grow flex-wrap">
+                
                 <a
                     href={watchUrl}
                     className="flex items-center justify-center gap-2 text-base font-bold text-black bg-gradient-to-r from-[#ff3333] to-[#aa0000] !py-3 !px-6 rounded-full transition-all duration-300 hover:shadow-[0_0_15px_rgba(255,51,51,0.7),0_0_25px_rgba(255,51,51,0.5)] min-h-[3rem] !ml-3.5"
                 >
                     <i className="fa-solid fa-play text-black group-hover:text-white" />
                     <span>Xem Ngay</span>
+
                 </a>
 
                 {/* Nút trailer */}

@@ -334,6 +334,17 @@ const Navbar = ({ activeTab, setActiveTab }) => {
                                         <div className="font-medium truncate">{user.email}</div>
                                     </div>
                                     <ul className="!py-2 text-sm text-gray-200" aria-labelledby="avatarButton">
+                                        {user.role === 'ADMIN' && (
+                                            <li>
+                                                <button
+                                                    onClick={() => navigate('/admin')}
+                                                    className="flex items-center cursor-pointer !px-4 !py-2 hover:bg-gray-600 hover:text-white w-full text-left"
+                                                >
+                                                    <FaUser className="!mr-2" />
+                                                    Quản trị viên
+                                                </button>
+                                            </li>
+                                        )}
                                         <li>
                                             <button
                                                 onClick={() => handleTabChange('profile')}
@@ -343,6 +354,7 @@ const Navbar = ({ activeTab, setActiveTab }) => {
                                                 Tài khoản
                                             </button>
                                         </li>
+
                                         <li>
                                             <button
                                                 onClick={() => handleTabChange('favorites')}

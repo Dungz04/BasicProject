@@ -85,7 +85,6 @@ const WatchPage = () => {
 
                 setContentJk({ ...contentDetailsJk, castList, urlPlayer: videoUrl.url });
                 
-                setIsVideoReady(true); // Đánh dấu video sẵn sàng
 
                 setContent({ ...contentDetails, credits, type: contentType });
 
@@ -93,6 +92,14 @@ const WatchPage = () => {
                 setAgeRating(rating);
 
                 
+                setIsVideoReady(true); 
+
+                if(contentDetailsJk.status === "UPCOMING"){
+                    setVideoError("UPCOMING"); 
+                    setIsVideoReady(false);
+                    setLoading(false);
+                    return;
+                }
                 
             } catch (err) {
                 console.error("Lỗi khi lấy dữ liệu:", err);
@@ -111,7 +118,7 @@ const WatchPage = () => {
 
     useEffect(() => {
         let hls = hlsRef.current; // Use hlsRef.current
-
+        
         const initVideo = () => {
             if (!videoRef.current) {
                 console.warn('videoRef.current is null, retrying...');
