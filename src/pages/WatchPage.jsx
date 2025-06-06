@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
-import tmdbApi from "../service/tmdbApi.jsx";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlay, faAngleLeft, faCaretDown, faCog, faPause } from "@fortawesome/free-solid-svg-icons";
 import cdnApi from "../service/cdnApi.jsx";
-import Hls from 'hls.js';
+import Hls from "hls.js";
 
 const WatchPage = () => {
     const { movieId, season, episode } = useParams();
@@ -13,7 +12,6 @@ const WatchPage = () => {
     const queryParams = new URLSearchParams(location.search);
     let type = queryParams.get("type") || (season || episode ? "tv" : "movie");
 
-    const [content, setContent] = useState(null);
     const [contentJk, setContentJk] = useState(null);
     const [episodes, setEpisodes] = useState([]);
     const [currentEpisode, setCurrentEpisode] = useState(null);
@@ -21,23 +19,22 @@ const WatchPage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [videoError, setVideoError] = useState(null);
-    const [isVideoReady, setIsVideoReady] = useState(false); // Trạng thái mới cho video
+    const [isVideoReady, setIsVideoReady] = useState(false);
     const [isSeasonDropdownOpen, setIsSeasonDropdownOpen] = useState(false);
     const [ageRating, setAgeRating] = useState("");
-    const [recommendations, setRecommendations] = useState(() => []);
     const [qualityLevels, setQualityLevels] = useState(() => []);
     const [selectedQuality, setSelectedQuality] = useState(-1); // -1 for auto
     const [isQualityMenuOpen, setIsQualityMenuOpen] = useState(false);
-    const [isVideoHovered, setIsVideoHovered] = useState(false); // For controlling button visibility
-    const [isVideoPlaying, setIsVideoPlaying] = useState(false); // Track play/pause state
+    const [isVideoHovered, setIsVideoHovered] = useState(false);
+    const [isVideoPlaying, setIsVideoPlaying] = useState(false);
 
     const position = queryParams.get("position");
 
     const version = { id: 1, type: "pd", label: "Phụ đề", bgColor: "bg-[#5e6070]" };
 
     const videoRef = useRef(null);
-    const hlsRef = useRef(null); 
-    const hideControlsTimeoutRef = useRef(null); 
+    const hlsRef = useRef(null);
+    const hideControlsTimeoutRef = useRef(null);
 
     const stableContentJk = useMemo(() => contentJk, [contentJk?.urlPlayer]);
 
@@ -53,26 +50,12 @@ const WatchPage = () => {
                 setLoading(true);
                 setError(null);
                 setVideoError(null);
-                setIsVideoReady(false); // Reset trạng thái video
+                setIsVideoReady(false);
 
-                let contentType = type;
-                let contentDetails;
-                let contentDetailsJk;
-                try {
-                    contentDetails = await tmdbApi.getContentDetails(movieId, contentType);
-                    contentDetailsJk = await cdnApi.getContentDetails(movieId);
-                } catch (err) {
-                    const fallbackType = contentType === "movie" ? "tv" : "movie";
-                    contentDetails = await tmdbApi.getContentDetails(movieId, fallbackType);
-                    contentDetailsJk = await cdnApi.getContentDetails(movieId);
-                    contentType = fallbackType;
-                }
-
+                const contentDetailsJk = await cdnApi.getContentDetails(movieId);
                 if (!contentDetailsJk) {
                     throw new Error("Không tìm thấy nội dung");
                 }
-
-                const credits = await tmdbApi.getContentCredits(movieId, contentType);
 
                 const videoUrl = await cdnApi.getAssets(contentDetailsJk.videoUrl, "video");
                 if (!videoUrl?.url) {
@@ -84,23 +67,18 @@ const WatchPage = () => {
                 console.log("VIDEO URL:", videoUrl.url);
 
                 setContentJk({ ...contentDetailsJk, castList, urlPlayer: videoUrl.url });
-                
-
-                setContent({ ...contentDetails, credits, type: contentType });
 
                 const rating = contentDetailsJk.rating;
                 setAgeRating(rating);
 
-                
-                setIsVideoReady(true); 
+                setIsVideoReady(true);
 
-                if(contentDetailsJk.status === "UPCOMING"){
-                    setVideoError("UPCOMING"); 
+                if (contentDetailsJk.status === "UPCOMING") {
+                    setVideoError("UPCOMING");
                     setIsVideoReady(false);
                     setLoading(false);
                     return;
                 }
-                
             } catch (err) {
                 console.error("Lỗi khi lấy dữ liệu:", err);
                 setError(
@@ -117,26 +95,26 @@ const WatchPage = () => {
     }, [movieId, type, currentSeason, episode]);
 
     useEffect(() => {
-        let hls = hlsRef.current; // Use hlsRef.current
-        
+        let hls = hlsRef.current;
+
         const initVideo = () => {
             if (!videoRef.current) {
-                console.warn('videoRef.current is null, retrying...');
-                const timeout = setTimeout(initVideo, 100); // Thử lại sau 100ms
+                console.warn("videoRef.current is null, retrying...");
+                const timeout = setTimeout(initVideo, 100);
                 return () => clearTimeout(timeout);
             }
 
             if (!stableContentJk?.urlPlayer || !isVideoReady) {
-                console.warn('Skipping video init: contentJk.urlPlayer or isVideoReady not ready');
+                console.warn("Skipping video init: contentJk.urlPlayer or isVideoReady not ready");
                 return;
             }
 
             const videoUrl = stableContentJk.urlPlayer;
-            console.log('Initializing video with URL:', videoUrl);
+            console.log("Initializing video with URL:", videoUrl);
 
             if (Hls.isSupported()) {
                 if (hls) {
-                    console.warn('HLS instance already exists, destroying previous instance');
+                    console.warn("HLS instance already exists, destroying previous instance");
                     hls.destroy();
                 }
 
@@ -145,19 +123,21 @@ const WatchPage = () => {
                     enableWorker: true,
                     lowLatencyMode: true,
                 });
-                hlsRef.current = hls; // Store HLS instance in ref
+                hlsRef.current = hls;
 
                 hls.loadSource(videoUrl);
                 hls.attachMedia(videoRef.current);
 
                 hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
-                    console.log('HLS manifest parsed', data.levels);
-                    setQualityLevels(data.levels.map((level, index) => ({
-                        height: level.height,
-                        bitrate: level.bitrate,
-                        index: index
-                    })));
-                    setSelectedQuality(hls.currentLevel); // Set initial quality (often auto, which is -1)
+                    console.log("HLS manifest parsed", data.levels);
+                    setQualityLevels(
+                        data.levels.map((level, index) => ({
+                            height: level.height,
+                            bitrate: level.bitrate,
+                            index: index,
+                        }))
+                    );
+                    setSelectedQuality(hls.currentLevel);
 
                     if (position) {
                         videoRef.current.currentTime = Number(position);
@@ -170,42 +150,42 @@ const WatchPage = () => {
                 });
 
                 hls.on(Hls.Events.ERROR, (event, data) => {
-                    console.error('HLS error:', data);
+                    console.error("HLS error:", data);
                     if (data.fatal) {
                         setVideoError(`Lỗi tải HLS: ${data.type}`);
-                        if (hlsRef.current) { // Use hlsRef.current
+                        if (hlsRef.current) {
                             hlsRef.current.destroy();
                             hlsRef.current = null;
                         }
                     }
                 });
-            } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
+            } else if (videoRef.current.canPlayType("application/vnd.apple.mpegurl")) {
                 videoRef.current.src = videoUrl;
                 const playHandler = () => {
-                    videoRef.current?.play().catch(error => {
-                        console.warn('Native HLS auto-play failed:', error);
-                        if (error.name !== 'NotAllowedError') {
-                            setVideoError('Không thể tự động phát video');
+                    videoRef.current?.play().catch((error) => {
+                        console.warn("Native HLS auto-play failed:", error);
+                        if (error.name !== "NotAllowedError") {
+                            setVideoError("Không thể tự động phát video");
                         }
                     });
                 };
-                videoRef.current.addEventListener('loadedmetadata', playHandler);
+                videoRef.current.addEventListener("loadedmetadata", playHandler);
                 videoRef.current.playHandler = playHandler;
             } else {
-                setVideoError('Trình duyệt không hỗ trợ HLS');
+                setVideoError("Trình duyệt không hỗ trợ HLS");
             }
         };
 
         initVideo();
 
         return () => {
-            if (hlsRef.current) { // Use hlsRef.current
-                console.log('Destroying HLS instance on cleanup');
+            if (hlsRef.current) {
+                console.log("Destroying HLS instance on cleanup");
                 hlsRef.current.destroy();
                 hlsRef.current = null;
             }
             if (videoRef.current && videoRef.current.playHandler) {
-                videoRef.current.removeEventListener('loadedmetadata', videoRef.current.playHandler);
+                videoRef.current.removeEventListener("loadedmetadata", videoRef.current.playHandler);
             }
         };
     }, [stableContentJk, isVideoReady, position]);
@@ -216,18 +196,17 @@ const WatchPage = () => {
             const handlePlay = () => setIsVideoPlaying(true);
             const handlePause = () => setIsVideoPlaying(false);
 
-            videoElement.addEventListener('play', handlePlay);
-            videoElement.addEventListener('pause', handlePause);
+            videoElement.addEventListener("play", handlePlay);
+            videoElement.addEventListener("pause", handlePause);
 
-            // Set initial state based on video's current paused state
             setIsVideoPlaying(!videoElement.paused);
 
             return () => {
-                videoElement.removeEventListener('play', handlePlay);
-                videoElement.removeEventListener('pause', handlePause);
+                videoElement.removeEventListener("play", handlePlay);
+                videoElement.removeEventListener("pause", handlePause);
             };
         }
-    }, [videoRef.current]); // Rerun if videoRef.current changes (e.g. on initial mount)
+    }, [videoRef.current]);
 
     useEffect(() => {
         return () => {
@@ -240,11 +219,14 @@ const WatchPage = () => {
     const handleQualityChange = (qualityIndex) => {
         if (hlsRef.current) {
             hlsRef.current.currentLevel = qualityIndex;
-            // setSelectedQuality will be updated by LEVEL_SWITCHED event, or we can set it here too for immediate UI feedback
-            // setSelectedQuality(qualityIndex); 
-            console.log(`Attempting to change HLS quality to: ${qualityIndex === -1 ? 'Auto' : qualityLevels.find(q => q.index === qualityIndex)?.height + 'p'}`);
+            console.log(
+                `Attempting to change HLS quality to: ${qualityIndex === -1
+                    ? "Auto"
+                    : qualityLevels.find((q) => q.index === qualityIndex)?.height + "p"
+                }`
+            );
         }
-        setIsQualityMenuOpen(false); // Close menu after selection
+        setIsQualityMenuOpen(false);
     };
 
     const handleMouseEnterVideo = () => {
@@ -258,12 +240,12 @@ const WatchPage = () => {
     const handleMouseLeaveVideo = () => {
         hideControlsTimeoutRef.current = setTimeout(() => {
             setIsVideoHovered(false);
-        }, 500); // 500ms delay before hiding
+        }, 500);
     };
 
     const handleEpisodeClick = (ep) => {
-        setVideoError(null); // Reset videoError khi chuyển tập
-        const selectedEpisode = episodes.find((ep) => ep.episode_number === ep.episode_number);
+        setVideoError(null);
+        const selectedEpisode = episodes.find((e) => e.episode_number === ep.episode_number);
         if (selectedEpisode) {
             setCurrentEpisode(selectedEpisode);
             navigate(`/xem-phim/${movieId}/season/${currentSeason}/episode/${ep.episode_number}?type=tv`);
@@ -271,7 +253,7 @@ const WatchPage = () => {
     };
 
     const handleSeasonChange = (seasonNumber) => {
-        setVideoError(null); // Reset videoError khi chuyển mùa
+        setVideoError(null);
         setCurrentSeason(seasonNumber);
         setIsSeasonDropdownOpen(false);
         navigate(`/xem-phim/${movieId}/season/${seasonNumber}/episode/1?type=tv`);
@@ -283,7 +265,7 @@ const WatchPage = () => {
     };
 
     const handleVideoError = (error) => {
-        console.error('Lỗi video:', error);
+        console.error("Lỗi video:", error);
         setVideoError(error.message);
     };
 
@@ -322,7 +304,7 @@ const WatchPage = () => {
         );
     }
 
-    if (!content) {
+    if (!contentJk) {
         return (
             <div className="flex justify-center items-center min-h-screen">
                 <div className="text-center">
@@ -336,23 +318,23 @@ const WatchPage = () => {
     const runtime = contentJk?.duration;
     const year = contentJk?.releaseYear;
 
-    const genreList = typeof contentJk?.genres === 'string'
-        ? contentJk.genres.split(',').map(genre => ({ name: genre.trim() }))
+    const genreList = typeof contentJk?.genres === "string"
+        ? contentJk.genres.split(",").map((genre) => ({ name: genre.trim() }))
         : Array.isArray(contentJk?.genres)
             ? contentJk.genres
             : [];
 
     const castListName = contentJk?.castList?.data?.castName
-        ? (typeof contentJk.castList.data.castName === 'string'
-            ? contentJk.castList.data.castName.split(',').map(item => item.trim())
+        ? (typeof contentJk.castList.data.castName === "string"
+            ? contentJk.castList.data.castName.split(",").map((item) => item.trim())
             : Array.isArray(contentJk.castList.data.castName)
                 ? contentJk.castList.data.castName
                 : [])
         : [];
 
     const castListData = contentJk?.castList?.data?.castData
-        ? (typeof contentJk.castList.data.castData === 'string'
-            ? contentJk.castList.data.castData.split(',').map(item => item.trim())
+        ? (typeof contentJk.castList.data.castData === "string"
+            ? contentJk.castList.data.castData.split(",").map((item) => item.trim())
             : Array.isArray(contentJk.castList.data.castData)
                 ? contentJk.castList.data.castData
                 : [])
@@ -384,8 +366,8 @@ const WatchPage = () => {
                             <p>{videoError}</p>
                         </div>
                     ) : isVideoReady ? (
-                        <div 
-                            className="relative w-full h-full" 
+                        <div
+                            className="relative w-full h-full"
                             onMouseEnter={handleMouseEnterVideo}
                             onMouseLeave={handleMouseLeaveVideo}
                         >
@@ -400,22 +382,37 @@ const WatchPage = () => {
                                             className="text-white !p-2 bg-black bg-opacity-60 rounded-full hover:bg-opacity-80 transition-opacity focus:outline-none"
                                             title="Cài đặt chất lượng"
                                         >
-                                            <FontAwesomeIcon icon={faCog} size="xl" /> {/* Increased size */}
+                                            <FontAwesomeIcon icon={faCog} size="xl" />
                                         </button>
                                         {isQualityMenuOpen && (
                                             <div className="absolute bottom-full right-0 !mb-2 w-36 bg-black bg-opacity-80 !p-2 rounded shadow-lg">
-                                                <div className="text-white text-sm !mb-1 border-b border-gray-600 !pb-1">Chất lượng</div>
+                                                <div className="text-white text-sm !mb-1 border-b border-gray-600 !pb-1">
+                                                    Chất lượng
+                                                </div>
                                                 <button
                                                     onClick={() => handleQualityChange(-1)}
-                                                    className={`block w-full text-left !px-2 !py-1 text-xs rounded ${selectedQuality === -1 || hlsRef.current?.autoLevelEnabled ? 'bg-red-600' : 'hover:bg-gray-700'} text-white mb-1`}
+                                                    className={`block w-full text-left !px-2 !py-1 text-xs rounded ${selectedQuality === -1 || hlsRef.current?.autoLevelEnabled
+                                                        ? "bg-red-600"
+                                                        : "hover:bg-gray-700"
+                                                        } text-white mb-1`}
                                                 >
-                                                    Tự động {selectedQuality === -1 || hlsRef.current?.autoLevelEnabled ? `(${qualityLevels.find(q => q.index === hlsRef.current?.currentLevel)?.height}p)` : ''}
+                                                    Tự động{" "}
+                                                    {selectedQuality === -1 || hlsRef.current?.autoLevelEnabled
+                                                        ? `(${qualityLevels.find(
+                                                            (q) => q.index === hlsRef.current?.currentLevel
+                                                        )?.height
+                                                        }p)`
+                                                        : ""}
                                                 </button>
                                                 {qualityLevels.map((level) => (
                                                     <button
                                                         key={level.index}
                                                         onClick={() => handleQualityChange(level.index)}
-                                                        className={`block w-full text-left !px-2 !py-1 text-xs rounded ${selectedQuality === level.index && !hlsRef.current?.autoLevelEnabled ? 'bg-red-600' : 'hover:bg-gray-700'} text-white mb-0.5 last:mb-0`}
+                                                        className={`block w-full text-left !px-2 !py-1 text-xs rounded ${selectedQuality === level.index &&
+                                                            !hlsRef.current?.autoLevelEnabled
+                                                            ? "bg-red-600"
+                                                            : "hover:bg-gray-700"
+                                                            } text-white mb-0.5 last:mb-0`}
                                                     >
                                                         {level.height}
                                                     </button>
@@ -437,45 +434,40 @@ const WatchPage = () => {
             {/* Nội dung chính */}
             <div className="flex flex-col xl:flex-row gap-6 rounded-[5px] !mt-6">
                 <div className="xl:w-2/3">
-                    <div className="p-3">
-                        <div className="flex items-start justify-between gap-10 xl:flex !mb-4">
+                    <div className="!p-3">
+                        <div className="flex flex-col lg:flex-row justify-between gap-6 !mb-6 !px-4 sm:px-6 lg:px-8">
                             {/* Movie Info */}
-                            <div className="flex gap-[20px] items-start !ml-2">
+                            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start">
                                 <img
-                                    className="w-[100px] object-cover rounded-lg"
-                                    src={
-                                        `${import.meta.env.VITE_API_BASE_URL}/assets/get_assets_web?linkAssets=${contentJk.imageUrl}&nameTag=poster`
-                                    }
-                                    alt={title}
+                                    className="w-24 sm:w-32 lg:w-30 h-auto object-cover rounded-lg shadow-md"
+                                    src={`${import.meta.env.VITE_API_BASE_URL}/assets/get_assets_web?linkAssets=${contentJk.imageUrl
+                                        }&nameTag=poster`}
+                                    alt={`Poster for ${title}`}
                                 />
-                                <div className="flex flex-col gap-[5px]">
-                                    <p className="text-[19px] text-white font-[600]">{title}</p>
-                                    {content.tagline && (
-                                        <p className="text-[14px] text-[#e50914]">{content.tagline}</p>
-                                    )}
-                                    <div className="flex items-center gap-2 mt-3 flex-wrap">
-                                        {content.vote_average && (
-                                            <div className="border border-[#e50914] rounded-[5px] !px-2">
-                                                <span className="text-xs bg-gray-800/50 !px-2 !py-1 rounded">
-                                                    TMDb {contentJk.rating}
-                                                </span>
-                                            </div>
+                                <div className="flex flex-col gap-4">
+                                    <h2 className="text-white text-xl sm:text-2xl lg:text-3xl font-semibold">{title}</h2>
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        {ageRating && (
+                                            <span className="border border-red-600 text-white text-xs font-medium !px-2 !py-1 rounded-md hover:bg-red-600/30 transition duration-200">
+                                                TMDb {ageRating}
+                                            </span>
                                         )}
-                                        <div className="border rounded-[5px]">
-                                            <span className="text-xs !px-1 text-white">{year}</span>
-                                        </div>
+                                        <span className="bg-white/10 text-white text-xs font-medium !px-2 !py-1 rounded-md hover:bg-white/20 transition duration-200">
+                                            {year}
+                                        </span>
                                         {runtime && (
-                                            <div className="border rounded-[5px]">
-                                                <span className="text-xs !px-1 text-white">
-                                                    {formatRuntime(runtime)}
-                                                </span>
-                                            </div>
+                                            <span className="bg-white/10 text-white text-xs font-medium !px-2 !py-1 rounded-md hover:bg-white/20 transition duration-200">
+                                                {formatRuntime(runtime)}
+                                            </span>
                                         )}
                                     </div>
-                                    <div className="flex items-center gap-2 mt-3 flex-wrap">
+                                    <div className="flex items-center gap-2 flex-wrap">
                                         {genreList.length > 0 ? (
                                             genreList.map((genre, index) => (
-                                                <span key={index} className="bg-neutral-800 text-white text-xs !px-3 !py-2 rounded-md hover:bg-gradient-to-tr hover:from-red-500 hover:to-red-900 transition-transform duration-200 ">
+                                                <span
+                                                    key={index}
+                                                    className="bg-neutral-800 text-white text-xs font-medium !px-3 !py-1.5 rounded-md hover:bg-gradient-to-tr hover:from-red-500 hover:to-red-900 transition duration-200"
+                                                >
                                                     {genre.name}
                                                 </span>
                                             ))
@@ -485,7 +477,7 @@ const WatchPage = () => {
                                     </div>
                                 </div>
                             </div>
-                            <div className="text-left max-w-[400px] !mr-1">
+                            <div className="text-left max-w-[400px]">
                                 <p className="overflow-hidden text-ellipsis line-clamp-4 text-[#AAAA] text-[14px]">
                                     {contentJk.overviewString || "Không có mô tả."}
                                 </p>
@@ -497,26 +489,23 @@ const WatchPage = () => {
                                 </button>
                             </div>
                         </div>
-                        
+
                         <div className="w-full h-[1px] bg-[#aaaaaa62] my-[1em] xl:block hidden"></div>
 
                         {/* Phim lẻ - Bản chiếu (chỉ phụ đề) */}
                         {type === "movie" && (
                             <div className="!mt-2 !ml-2">
                                 <div className="text-center">
-                                    <span className="text-white text-[30px] !px-2">
-                                        Bản chiếu
-                                    </span>
+                                    <span className="text-white text-[30px] !px-2">Bản chiếu</span>
                                 </div>
                                 <a
                                     href={`/xem-phim/${movieId}?type=movie&version=${version.type}`}
                                     className={`relative flex rounded-xl overflow-hidden ${version.bgColor} text-white hover:-translate-y-1 transition-transform duration-200 group w-[300px] h-[150px] !mt-2 `}
                                 >
-                                    <div className=" absolute top-0 bottom-0 right-0 !w-[40%] max-w-[130px] [mask-image:linear-gradient(270deg,#000_0,transparent_95%)]">
+                                    <div className="absolute top-0 bottom-0 right-0 !w-[40%] max-w-[130px] [mask-image:linear-gradient(270deg,#000_0,transparent_95%)]">
                                         <img
-                                            src={
-                                                `${import.meta.env.VITE_API_BASE_URL}/assets/get_assets_web?linkAssets=${contentJk.imageUrl}&nameTag=poster`
-                                            }
+                                            src={`${import.meta.env.VITE_API_BASE_URL}/assets/get_assets_web?linkAssets=${contentJk.imageUrl
+                                                }&nameTag=poster`}
                                             alt={title}
                                             className="w-full h-full object-cover"
                                         />
@@ -527,9 +516,7 @@ const WatchPage = () => {
                                                 {version.label}
                                             </span>
                                         </div>
-                                        <div className="font-semibold text-lg leading-tight">
-                                            {title}
-                                        </div>
+                                        <div className="font-semibold text-lg leading-tight">{title}</div>
                                         <div className="bg-red-600 text-white text-sm !px-3 !py-1 rounded-md group-hover:bg-transparent group-hover:border group-hover:border-red-600 transition-colors">
                                             Đang xem
                                         </div>
@@ -537,13 +524,10 @@ const WatchPage = () => {
                                 </a>
                             </div>
                         )}
-
-                        {/* Phim bộ - Danh sách tập */}
-                        
                     </div>
                 </div>
 
-                {/* Sidebar - Cast and Recommendations */}
+                {/* Sidebar - Cast */}
                 <div className="xl:w-1/3 flex !mr-4">
                     <div className="h-full w-[1px] bg-[#aaaaaa52] !ml-2 !mr-3"></div>
                     <div className="p-3 w-full">
@@ -552,24 +536,17 @@ const WatchPage = () => {
                                 <p className="text-[30px] text-center text-white !mb-4">Diễn viên</p>
                                 <div className="mt-[20px] grid lg:grid-cols-3 grid-cols-2 gap-3">
                                     {castListData.slice(0, 5).map((actor, index) => (
-                                        <div
-                                            key={index}
-                                            className="flex flex-col items-center gap-1"
-                                        >
+                                        <div key={index} className="flex flex-col items-center gap-1">
                                             <img
-                                                src={
-                                                    `${import.meta.env.VITE_API_BASE_URL}/assets/get_assets_web?linkAssets=${castListData[index]}&nameTag=cast&nameMovie=${title}`
-                                                }
+                                                src={`${import.meta.env.VITE_API_BASE_URL}/assets/get_assets_web?linkAssets=${castListData[index]
+                                                    }&nameTag=cast&nameMovie=${title}`}
                                                 alt={castListName[index]}
-                                                className="w-16 h-24 object-cover rounded-lg transition-transform duration-300 hover:scale-105 hover:brightness-90"
+                                                className="w-16 h-24 object-cover rounded-lg transition-transform duration-300  hover:brightness-90"
                                             />
                                             <div>
                                                 <p className="font-medium hover:text-red-600 text-center">
                                                     {castListName[index]}
                                                 </p>
-                                                {/* <p className="text-sm text-gray-400 mt-1 text-center">
-                                                    {actor.character || "Không có vai diễn"}
-                                                </p> */}
                                             </div>
                                         </div>
                                     ))}
@@ -577,10 +554,6 @@ const WatchPage = () => {
                             </>
                         )}
                         <div className="w-full h-[1px] bg-[#aaaaaa28] !mt-2"></div>
-
-                        {/* gợi ý phim */}
-                        
-                        
                     </div>
                 </div>
             </div>
